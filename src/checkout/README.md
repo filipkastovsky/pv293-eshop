@@ -10,7 +10,10 @@ Team A.
 
 ## Internal architecture
 
-TODO: your team decides — write the style and why.
+**Domain model.** Two aggregates, `Cart` and `Order` (`domain/`), own every rule and record the events; command handlers (`application/`, on the in-module `CommandBus`) load one aggregate, call one method, save it with an optimistic version check and publish what it recorded. Why: Checkout is the core of the shop and carries most of its rules (what may happen in which state, how prices and totals are fixed), so they live in one place, testable without the database, while the controller and policies stay thin.
+
+- Checkout asks Catalog for current prices (`GetProduct`) and freezes them into the order lines; `CreateOrderPolicy` then creates the `Order` from `CartCheckedOut`.
+- Repeating an order transition that already happened is a no-op without an event, so a duplicate `PaymentSucceeded` pays the order once.
 
 ## Events emitted
 
