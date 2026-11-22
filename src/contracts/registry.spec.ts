@@ -1,19 +1,32 @@
 import {
   EVENT_TYPES,
+  eventFromJson,
   InvalidEventPayloadError,
   OrderPaid,
   UnknownEventError,
-  eventFromJson,
 } from './index';
 
 const EXPECTED = [
-  'ProductAdded', 'PriceChanged', 'ProductDiscontinued',
-  'ItemAddedToCart', 'ItemRemovedFromCart', 'CartCheckedOut', 'OrderCreated',
-  'OrderPlaced', 'OrderPaid', 'OrderCancelled',
-  'StockReceived', 'StockReserved', 'StockReservationFailed', 'StockReleased',
+  'ProductAdded',
+  'PriceChanged',
+  'ProductDiscontinued',
+  'ItemAddedToCart',
+  'ItemRemovedFromCart',
+  'CartCheckedOut',
+  'OrderCreated',
+  'OrderPlaced',
+  'OrderPaid',
+  'OrderCancelled',
+  'StockReceived',
+  'StockReserved',
+  'StockReservationFailed',
+  'StockReleased',
   'OrderPacked',
-  'PaymentInitiated', 'PaymentSucceeded', 'PaymentFailed',
-  'OrderSummarySent', 'CancellationNoticeSent',
+  'PaymentInitiated',
+  'PaymentSucceeded',
+  'PaymentFailed',
+  'OrderSummarySent',
+  'CancellationNoticeSent',
 ];
 
 describe('contracts registry', () => {
@@ -35,19 +48,25 @@ describe('contracts registry', () => {
   });
 
   it('OrderEvent without orderId throws InvalidEventPayloadError', () => {
-    expect(() => eventFromJson('OrderPaid', {})).toThrow(InvalidEventPayloadError);
-    expect(() => eventFromJson('OrderPaid', null)).toThrow(InvalidEventPayloadError);
+    expect(() => eventFromJson('OrderPaid', {})).toThrow(
+      InvalidEventPayloadError,
+    );
+    expect(() => eventFromJson('OrderPaid', null)).toThrow(
+      InvalidEventPayloadError,
+    );
   });
 
   it('every class requires all its declared fields', () => {
     for (const [name, cls] of Object.entries(EVENT_TYPES)) {
-      const fields = (cls as any).fields as string[];
+      const fields = (cls as unknown as { fields: string[] }).fields;
       expect(fields.length).toBeGreaterThan(0);
       const full = Object.fromEntries(fields.map((f) => [f, 'x']));
       expect(() => eventFromJson(name, full)).not.toThrow();
       for (const f of fields) {
         const { [f]: _omit, ...rest } = full;
-        expect(() => eventFromJson(name, rest)).toThrow(InvalidEventPayloadError);
+        expect(() => eventFromJson(name, rest)).toThrow(
+          InvalidEventPayloadError,
+        );
       }
     }
   });

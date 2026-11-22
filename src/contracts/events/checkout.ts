@@ -27,7 +27,12 @@ export class OrderCreated extends OrderEvent {
 }
 
 export class OrderPlaced extends OrderEvent {
-  static readonly fields = ['orderId', 'customerEmail', 'lines', 'total'] as const;
+  static readonly fields = [
+    'orderId',
+    'customerEmail',
+    'lines',
+    'total',
+  ] as const;
   declare readonly orderId: string;
   declare readonly customerEmail: string;
   declare readonly lines: OrderLine[];

@@ -33,18 +33,27 @@ export abstract class DomainEvent implements IEvent {
   constructor(payload: object) {
     const ctor = this.constructor as typeof DomainEvent;
     if (payload === null || typeof payload !== 'object') {
-      throw new InvalidEventPayloadError(ctor.name, 'payload must be an object');
+      throw new InvalidEventPayloadError(
+        ctor.name,
+        'payload must be an object',
+      );
     }
     const data = payload as Record<string, unknown>;
     for (const field of ctor.fields) {
       if (data[field] === undefined || data[field] === null) {
-        throw new InvalidEventPayloadError(ctor.name, `missing required field "${field}"`);
+        throw new InvalidEventPayloadError(
+          ctor.name,
+          `missing required field "${field}"`,
+        );
       }
     }
     for (const field of ctor.fields) {
       (this as Record<string, unknown>)[field] = data[field];
     }
-    this.occurredAt = typeof data.occurredAt === 'string' ? data.occurredAt : new Date().toISOString();
+    this.occurredAt =
+      typeof data.occurredAt === 'string'
+        ? data.occurredAt
+        : new Date().toISOString();
   }
 }
 

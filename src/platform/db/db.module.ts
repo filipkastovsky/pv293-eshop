@@ -15,7 +15,11 @@ import { DB, PG_POOL } from './db.tokens';
             'postgres://eshop:eshop@localhost:5432/eshop',
         }),
     },
-    { provide: DB, inject: [PG_POOL], useFactory: (pool: Pool) => drizzle(pool) },
+    {
+      provide: DB,
+      inject: [PG_POOL],
+      useFactory: (pool: Pool) => drizzle(pool),
+    },
   ],
   exports: [DB],
 })
