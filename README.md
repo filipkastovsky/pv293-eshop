@@ -42,7 +42,7 @@ The full rules for people and coding agents are in [AGENTS.md](AGENTS.md).
 
 ## Tools
 
-- **NestJS 11**: one `@Module` per bounded context, plus `src/platform/`.
+- **NestJS 12**: one `@Module` per bounded context, plus `src/platform/`.
 - **@nestjs/cqrs**: used only for integration between modules: the `EventBus` carries events, the
   `QueryBus` carries public queries. No module is required to use command handlers, sagas or
   aggregates inside.
