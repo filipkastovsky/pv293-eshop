@@ -17,7 +17,7 @@ export class CatalogController {
 
   @Patch(':sku/price')
   changePrice(@Param('sku') sku: string, @Body() body: { price: number }) {
-    return this.catalog.changePrice(sku, body.price);
+    return this.catalog.changePrice(sku, body?.price);
   }
 
   @Post(':sku/discontinue')

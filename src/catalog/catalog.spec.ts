@@ -74,6 +74,40 @@ describe('catalog', () => {
     });
   });
 
+  it('events carry the stored values, not the raw request', async () => {
+    const res = await http()
+      .post('/catalog/products')
+      .send({ sku: 'ROUND-01', name: 'Round', price: 2.505, extra: 'x' })
+      .expect(201);
+    const event = published.at(-1);
+    expect(event).toBeInstanceOf(ProductAdded);
+    expect(event).toMatchObject({ sku: 'ROUND-01', price: res.body.price });
+    expect(event).not.toHaveProperty('extra');
+    const changed = await http()
+      .patch('/catalog/products/ROUND-01/price')
+      .send({ price: 4.005 })
+      .expect(200);
+    expect(published.at(-1)).toMatchObject({ price: changed.body.price });
+  });
+
+  it('malformed input -> 400 and nothing published', async () => {
+    const before = published.length;
+    await http()
+      .post('/catalog/products')
+      .send({ sku: 'BAD-01', name: 'Bad', price: '2' })
+      .expect(400);
+    await http()
+      .post('/catalog/products')
+      .send({ sku: 'BAD-01', price: 2 })
+      .expect(400);
+    await http()
+      .patch('/catalog/products/PEN-01/price')
+      .send({ price: 'abc' })
+      .expect(400);
+    await http().patch('/catalog/products/PEN-01/price').send({}).expect(400);
+    expect(published).toHaveLength(before);
+  });
+
   it('adding an existing sku -> 409', async () => {
     const before = published.length;
     await http()
