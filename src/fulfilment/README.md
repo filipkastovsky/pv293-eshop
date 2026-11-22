@@ -12,7 +12,9 @@ Team B.
 
 ## Internal architecture
 
-TODO: your team decides — write the style and why.
+**A single event reaction plus a table.** `PackOrderPolicy` reacts to `OrderPaid` by inserting a row into `shipment` and publishing `OrderPacked`; `ShipmentsController` reads that table, and there is nothing else. Why: packing is one step with one rule (one shipment per order); any more structure would have no content.
+
+- The primary key on `order_id` makes a duplicate `OrderPaid` a no-op: no second shipment, no second `OrderPacked`.
 
 ## Events emitted
 
