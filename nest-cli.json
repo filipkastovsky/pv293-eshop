@@ -8,6 +8,10 @@
       {
         "include": "platform/timeline/db/migrations/**/*",
         "watchAssets": true
+      },
+      {
+        "include": "catalog/db/migrations/**/*",
+        "watchAssets": true
       }
     ]
   }
