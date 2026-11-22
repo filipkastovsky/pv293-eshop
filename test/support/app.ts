@@ -42,6 +42,7 @@ export async function bootTestApp(): Promise<TestApp> {
   const app: INestApplication = moduleRef.createNestApplication();
   await app.init();
 
+  let closed = false;
   const http = () => request(app.getHttpServer());
   const timeline = async (orderId: string) =>
     (await http().get(`/orders/${orderId}/timeline`)).body
@@ -62,7 +63,7 @@ export async function bootTestApp(): Promise<TestApp> {
           names,
         )
       ) {
-        if (Date.now() > deadline) {
+        if (closed || Date.now() > deadline) {
           throw new Error(
             `Timeline of ${orderId} never contained [${names.join(', ')}] in order. Got: [${entries.map((e) => e.name).join(', ')}]`,
           );
@@ -73,6 +74,7 @@ export async function bootTestApp(): Promise<TestApp> {
       return entries;
     },
     async close() {
+      closed = true;
       await app.close();
       await db.drop();
       delete process.env.DEV_ENDPOINTS;

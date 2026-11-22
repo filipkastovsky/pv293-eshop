@@ -25,6 +25,7 @@ describe.skip('happy path: from cart to packed order', () => {
         .send({ customerEmail: 'a@b.cz' })
         .expect(201)
     ).body.orderId as string;
+    await t.waitForTimeline(orderId, ['OrderCreated']);
     await t.http().post(`/orders/${orderId}/place`).expect(202);
 
     // StockReserved and OrderSummarySent both react to OrderPlaced and may

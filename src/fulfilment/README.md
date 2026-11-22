@@ -4,6 +4,8 @@
 
 Packs paid orders: creates a shipment for every order that has been paid.
 
+Fulfilment has no command of its own, so its first milestone is M3 (reacting to `OrderPaid`).
+
 ## Owner
 
 Team B.

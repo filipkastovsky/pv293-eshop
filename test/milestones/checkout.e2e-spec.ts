@@ -57,7 +57,10 @@ describe.skip('Checkout M2: cart, checkout and placing through its own routes', 
   it('placing the order emits OrderPlaced and the status becomes placed', async () => {
     const cartId = randomUUID();
     await addItem(cartId, 'BEER-01', 1).expect(201);
+    // Enough stock so a real Inventory does not cancel the order (404 is fine while it is missing).
+    await t.http().post('/inventory/BEER-01/receive').send({ quantity: 100 });
     const orderId = await checkout(cartId);
+    await t.waitForTimeline(orderId, ['OrderCreated']);
     await t.http().post(`/orders/${orderId}/place`).expect(202);
     const entries = await t.waitForTimeline(orderId, [
       'OrderCreated',
@@ -88,6 +91,8 @@ describe.skip('Checkout M3: reacting to other teams events', () => {
   afterAll(() => t.close());
 
   const placeOrder = async () => {
+    // Enough stock so a real Inventory reserves it (404 is fine while it is missing).
+    await t.http().post('/inventory/BEER-01/receive').send({ quantity: 100 });
     const cartId = randomUUID();
     await t
       .http()
@@ -101,6 +106,7 @@ describe.skip('Checkout M3: reacting to other teams events', () => {
         .send({ customerEmail: 'a@b.cz' })
         .expect(201)
     ).body.orderId as string;
+    await t.waitForTimeline(orderId, ['OrderCreated']);
     await t.http().post(`/orders/${orderId}/place`).expect(202);
     await t.waitForTimeline(orderId, ['OrderCreated', 'OrderPlaced']);
     return orderId;

@@ -23,6 +23,7 @@ describe.skip('unhappy paths', () => {
         .send({ customerEmail: 'a@b.cz' })
         .expect(201)
     ).body.orderId as string;
+    await t.waitForTimeline(orderId, ['OrderCreated']);
     await t.http().post(`/orders/${orderId}/place`).expect(202);
     return orderId;
   };

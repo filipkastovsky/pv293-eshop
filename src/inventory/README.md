@@ -4,6 +4,8 @@
 
 Owns stock levels per SKU: receiving stock, reserving it for placed orders and releasing it when an order is cancelled.
 
+`onHand` is the physical stock on the shelf: reserving does not decrement it. `reserved` is the quantity held for placed orders. Available stock is `onHand - reserved`.
+
 ## Owner
 
 Team B.

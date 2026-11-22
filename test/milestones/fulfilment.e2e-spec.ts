@@ -1,20 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { bootTestApp, TestApp } from '../support/app';
 
-// Team B, Fulfilment. Un-skip a milestone when you start it.
+// Team B, Fulfilment. Un-skip the milestone when you start it.
+// Fulfilment has no command of its own, so its first milestone is M3.
 // Black-box: HTTP routes in, events (timeline) and HTTP responses out.
-
-describe.skip('Fulfilment M2: shipments are readable through its own route', () => {
-  let t: TestApp;
-  beforeAll(async () => {
-    t = await bootTestApp();
-  });
-  afterAll(() => t.close());
-
-  it('an order that was never paid has no shipment (404)', async () => {
-    await t.http().get(`/shipments/${randomUUID()}`).expect(404);
-  });
-});
 
 describe.skip('Fulfilment M3: reacting to OrderPaid', () => {
   let t: TestApp;
