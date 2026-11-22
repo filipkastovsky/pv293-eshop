@@ -106,7 +106,9 @@ Rules every module keeps:
 - **Contracts** ([0005](adr/0005-integration-through-contracts.md)): modules talk only through
   events (facts, published by their owner) and public read-only queries (answered by the owner).
   There are no cross-module commands: a module that reacts to another module's event does so with
-  its own policy, issuing its own command, and never re-publishes the incoming event.
+  its own policy, issuing its own command, and never re-publishes the incoming event. A module
+  does not build a copy of another module's data from its events; it asks the owner with its
+  public query, so reads are strongly consistent.
 - **Failure injection**: every reaction to an event first calls
   `ChaosService.maybeFail('<PolicyName>')`, so a failure can be injected into any reaction.
 

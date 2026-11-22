@@ -16,7 +16,7 @@ reasoning behind it.
 
 Open:
 
-- 0008 — What happens to an event when its handler fails? — open (to be written in the seminar)
+- 0008 — What happens to an event when its handler fails? — open, not yet written
 
 ## How we write ADRs
 

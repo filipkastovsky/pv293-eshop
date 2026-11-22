@@ -40,6 +40,8 @@ Every reaction calls `ChaosService.maybeFail('<PolicyName>')` first, before doin
 
 - `GetOrderSummary` -> `OrderSummary | null`
 
+Asks `GetProduct` (answered by Catalog) for item prices.
+
 ## HTTP
 
 - `POST /carts/:cartId/items` `{ sku, quantity }` -> 201

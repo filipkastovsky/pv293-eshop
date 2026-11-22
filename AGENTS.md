@@ -34,6 +34,8 @@ of the module you are changing before you change it.
   `<Command>Policy` that runs that module's own command. Never re-publish the incoming event.
 - Events carry the data a subscriber needs to act, not only identifiers.
 - A query never changes state.
+- Do not build a copy of another module's data from its events; ask the owner with its public
+  query (reads are strongly consistent).
 - Changing an existing event or query is a cross-team change: list every consuming module in the
   pull request and check each of them. Add fields rather than rename or remove them.
 - Names come from the ubiquitous language, in PascalCase (`Stock Reserved` -> `StockReserved`).
