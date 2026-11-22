@@ -5,7 +5,7 @@ import { bootTestApp, TestApp } from '../support/app';
 // Fulfilment has no command of its own, so its first milestone is M3.
 // Black-box: HTTP routes in, events (timeline) and HTTP responses out.
 
-describe.skip('Fulfilment M3: reacting to OrderPaid', () => {
+describe('Fulfilment M3: reacting to OrderPaid', () => {
   let t: TestApp;
   beforeAll(async () => {
     t = await bootTestApp();

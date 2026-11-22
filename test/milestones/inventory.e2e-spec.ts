@@ -13,7 +13,7 @@ const placed = (orderId: string, sku: string, quantity: number) => ({
   total: 4.5 * quantity,
 });
 
-describe.skip('Inventory M2: receiving stock through its own routes', () => {
+describe('Inventory M2: receiving stock through its own routes', () => {
   let t: TestApp;
   beforeAll(async () => {
     t = await bootTestApp();
@@ -49,7 +49,7 @@ describe.skip('Inventory M2: receiving stock through its own routes', () => {
   });
 });
 
-describe.skip('Inventory M3: reacting to OrderPlaced and OrderCancelled', () => {
+describe('Inventory M3: reacting to OrderPlaced and OrderCancelled', () => {
   let t: TestApp;
   beforeAll(async () => {
     t = await bootTestApp();

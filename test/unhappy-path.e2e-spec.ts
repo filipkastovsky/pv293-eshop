@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { bootTestApp, TestApp } from './support/app';
 
 // Un-skip when checkout, inventory and fulfilment all work together.
-describe.skip('unhappy paths', () => {
+describe('unhappy paths', () => {
   let t: TestApp;
   beforeAll(async () => {
     t = await bootTestApp();

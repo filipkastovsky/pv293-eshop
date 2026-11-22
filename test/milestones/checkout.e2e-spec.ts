@@ -5,7 +5,7 @@ import { bootTestApp, TestApp } from '../support/app';
 // Black-box: HTTP routes in, events (timeline) and HTTP responses out.
 // Seed prices (Catalog): BEER-01 2.90, MAT-01 24.50.
 
-describe.skip('Checkout M2: cart, checkout and placing through its own routes', () => {
+describe('Checkout M2: cart, checkout and placing through its own routes', () => {
   let t: TestApp;
   beforeAll(async () => {
     t = await bootTestApp();
@@ -83,7 +83,7 @@ describe.skip('Checkout M2: cart, checkout and placing through its own routes', 
   });
 });
 
-describe.skip('Checkout M3: reacting to other teams events', () => {
+describe('Checkout M3: reacting to other teams events', () => {
   let t: TestApp;
   beforeAll(async () => {
     t = await bootTestApp();
