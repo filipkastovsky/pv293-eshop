@@ -7,11 +7,18 @@ if (!mod) {
   console.error('Usage: npm run db:generate -- <module>');
   process.exit(1);
 }
+// Run drizzle-kit via node directly: no shell, so it works on Windows too.
 const r = spawnSync(
-  'npx',
-  ['drizzle-kit', 'generate', '--config', `src/${mod}/drizzle.config.ts`],
+  process.execPath,
+  [
+    path.join(path.dirname(require.resolve('drizzle-kit')), 'bin.cjs'),
+    'generate',
+    '--config',
+    `src/${mod}/drizzle.config.ts`,
+  ],
   { stdio: 'inherit' },
 );
+if (r.error) console.error(r.error);
 if (r.status === 0) {
   // drizzle-kit emits a bare CREATE SCHEMA, which clashes with migrateModule
   // (it creates the schema first). Make it idempotent.

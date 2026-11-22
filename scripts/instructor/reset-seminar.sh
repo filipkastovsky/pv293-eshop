@@ -19,14 +19,14 @@ git rev-parse -q --verify refs/tags/starter >/dev/null || {
 echo "This will:"
 echo "  1. force-push tag 'starter' to origin/main (discarding all student work on main)"
 echo "  2. wait until CI has deployed the starter image (up to 15 min)"
-echo "  3. DROP SCHEMA checkout, inventory, fulfilment, platform CASCADE in pv293_eshop (context: $ctx)"
-echo "  4. restart deployment/eshop so migrations re-run on a fresh pod"
+echo "  3. DROP SCHEMA catalog, checkout, inventory, fulfilment, payment, notifications, platform CASCADE in pv293_eshop (context: $ctx)"
+echo "  4. restart deployment/eshop so migrations and seeds re-run on a fresh pod"
 read -r -p "Type 'reset' to continue: " answer
 [ "$answer" = "reset" ] || { echo "Aborted."; exit 1; }
 
 k() { kubectl --context "$ctx" "$@"; }
 
-sha7=$(git rev-parse --short=7 refs/tags/starter)
+sha7=$(git rev-parse --short=7 'refs/tags/starter^{commit}')
 current_image() {
   k -n pv293-eshop get deployment/eshop \
     -o jsonpath='{.spec.template.spec.containers[?(@.name=="eshop")].image}'
@@ -56,7 +56,7 @@ k -n pv293-eshop rollout status deployment/eshop --timeout=120s
 
 # Drop and restart back to back so no pod serves against dropped schemas for long.
 k -n cnpg-system exec "$primary" -- psql -U postgres -d pv293_eshop -v ON_ERROR_STOP=1 \
-  -c 'DROP SCHEMA IF EXISTS checkout, inventory, fulfilment, platform CASCADE'
+  -c 'DROP SCHEMA IF EXISTS catalog, checkout, inventory, fulfilment, payment, notifications, platform CASCADE'
 k -n pv293-eshop rollout restart deployment/eshop
 k -n pv293-eshop rollout status deployment/eshop --timeout=120s
 echo "Done."
