@@ -18,6 +18,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:generate": "node scripts/db-generate.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "docs:check": "ts-node --transpile-only scripts/docs-check.ts",
     "lint": "biome ci .",
     "format": "biome format --write ."
   },
@@ -69,7 +70,8 @@
     "testEnvironment": "node",
     "roots": [
       "<rootDir>/src",
-      "<rootDir>/test"
+      "<rootDir>/test",
+      "<rootDir>/scripts"
     ]
   }
 }

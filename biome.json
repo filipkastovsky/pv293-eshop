@@ -53,6 +53,12 @@
   },
   "overrides": [
     {
+      "includes": ["docs/adr/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
       "linter": {
         "rules": {
           "style": {
