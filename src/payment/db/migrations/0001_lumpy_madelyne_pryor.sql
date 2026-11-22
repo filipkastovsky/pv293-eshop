@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "payments_live_order_idx" ON "payment"."payments" USING btree ("order_id") WHERE "payment"."payments"."status" in ('initiated', 'succeeded');

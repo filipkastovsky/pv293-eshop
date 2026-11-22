@@ -1,0 +1,351 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.8/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/node_modules",
+      "!**/coverage",
+      "!.superpowers",
+      "!test/lint/fixtures",
+      "!**/meta/_journal.json",
+      "!**/meta/*_snapshot.json",
+      "!**/drizzle"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "useImportType": "off"
+      },
+      "suspicious": {
+        "noImportCycles": "error"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single"
+    },
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["docs/adr/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**/checkout",
+                      "../**/checkout/**",
+                      "../**/inventory",
+                      "../**/inventory/**",
+                      "../**/fulfilment",
+                      "../**/fulfilment/**",
+                      "../**/payment",
+                      "../**/payment/**",
+                      "../**/notifications",
+                      "../**/notifications/**",
+                      "../**/platform/**",
+                      "@/**",
+                      "~/**",
+                      "src/**"
+                    ],
+                    "message": "Module 'catalog' may import only its own files, src/contracts/**, the platform index (src/platform) and libraries."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "includes": ["src/catalog/**"]
+    },
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**/catalog",
+                      "../**/catalog/**",
+                      "../**/inventory",
+                      "../**/inventory/**",
+                      "../**/fulfilment",
+                      "../**/fulfilment/**",
+                      "../**/payment",
+                      "../**/payment/**",
+                      "../**/notifications",
+                      "../**/notifications/**",
+                      "../**/platform/**",
+                      "@/**",
+                      "~/**",
+                      "src/**"
+                    ],
+                    "message": "Module 'checkout' may import only its own files, src/contracts/**, the platform index (src/platform) and libraries."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "includes": ["src/checkout/**"]
+    },
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**/catalog",
+                      "../**/catalog/**",
+                      "../**/checkout",
+                      "../**/checkout/**",
+                      "../**/fulfilment",
+                      "../**/fulfilment/**",
+                      "../**/payment",
+                      "../**/payment/**",
+                      "../**/notifications",
+                      "../**/notifications/**",
+                      "../**/platform/**",
+                      "@/**",
+                      "~/**",
+                      "src/**"
+                    ],
+                    "message": "Module 'inventory' may import only its own files, src/contracts/**, the platform index (src/platform) and libraries."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "includes": ["src/inventory/**"]
+    },
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**/catalog",
+                      "../**/catalog/**",
+                      "../**/checkout",
+                      "../**/checkout/**",
+                      "../**/inventory",
+                      "../**/inventory/**",
+                      "../**/payment",
+                      "../**/payment/**",
+                      "../**/notifications",
+                      "../**/notifications/**",
+                      "../**/platform/**",
+                      "@/**",
+                      "~/**",
+                      "src/**"
+                    ],
+                    "message": "Module 'fulfilment' may import only its own files, src/contracts/**, the platform index (src/platform) and libraries."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "includes": ["src/fulfilment/**"]
+    },
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**/catalog",
+                      "../**/catalog/**",
+                      "../**/checkout",
+                      "../**/checkout/**",
+                      "../**/inventory",
+                      "../**/inventory/**",
+                      "../**/fulfilment",
+                      "../**/fulfilment/**",
+                      "../**/notifications",
+                      "../**/notifications/**",
+                      "../**/platform/**",
+                      "@/**",
+                      "~/**",
+                      "src/**"
+                    ],
+                    "message": "Module 'payment' may import only its own files, src/contracts/**, the platform index (src/platform) and libraries."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "includes": ["src/payment/**"]
+    },
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**/catalog",
+                      "../**/catalog/**",
+                      "../**/checkout",
+                      "../**/checkout/**",
+                      "../**/inventory",
+                      "../**/inventory/**",
+                      "../**/fulfilment",
+                      "../**/fulfilment/**",
+                      "../**/payment",
+                      "../**/payment/**",
+                      "../**/platform/**",
+                      "@/**",
+                      "~/**",
+                      "src/**"
+                    ],
+                    "message": "Module 'notifications' may import only its own files, src/contracts/**, the platform index (src/platform) and libraries."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "includes": ["src/notifications/**"]
+    },
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**/catalog",
+                      "../**/catalog/**",
+                      "../**/checkout",
+                      "../**/checkout/**",
+                      "../**/inventory",
+                      "../**/inventory/**",
+                      "../**/fulfilment",
+                      "../**/fulfilment/**",
+                      "../**/payment",
+                      "../**/payment/**",
+                      "../**/notifications",
+                      "../**/notifications/**",
+                      "../**/platform",
+                      "../**/platform/**",
+                      "@/**",
+                      "~/**",
+                      "src/**"
+                    ],
+                    "message": "src/contracts/** must not import from other parts of src/."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "includes": ["src/contracts/**"]
+    },
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "../**/catalog",
+                      "../**/catalog/**",
+                      "../**/checkout",
+                      "../**/checkout/**",
+                      "../**/inventory",
+                      "../**/inventory/**",
+                      "../**/fulfilment",
+                      "../**/fulfilment/**",
+                      "../**/payment",
+                      "../**/payment/**",
+                      "../**/notifications",
+                      "../**/notifications/**",
+                      "@/**",
+                      "~/**",
+                      "src/**"
+                    ],
+                    "message": "src/platform/** may import only src/contracts/**."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "includes": ["src/platform/**"]
+    }
+  ],
+  "yaml": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  }
+}

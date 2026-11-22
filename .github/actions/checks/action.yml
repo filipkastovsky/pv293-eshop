@@ -1,0 +1,42 @@
+name: checks
+description: Install, lint, typecheck, docs check, tests and a production-build smoke test
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+    - run: npm ci
+      shell: bash
+    - run: npm run lint
+      shell: bash
+    - run: npm run typecheck
+      shell: bash
+    - run: npm run docs:check
+      shell: bash
+    - run: npm test
+      shell: bash
+    - run: npm run test:e2e
+      shell: bash
+    - name: Smoke test the production build
+      shell: bash
+      env:
+        PGPASSWORD: eshop
+        DATABASE_URL: postgres://eshop:eshop@localhost:5432/smoke
+        PORT: '3100'
+      run: |
+        set -euo pipefail
+        npm run build
+        test -f dist/main.js
+        psql -h localhost -U eshop -d eshop -c 'CREATE DATABASE smoke'
+        node dist/main.js > smoke.log 2>&1 &
+        pid=$!
+        trap 'kill "$pid" 2>/dev/null || true' EXIT
+        for _ in $(seq 1 30); do
+          curl -fs http://localhost:3100/health && break
+          sleep 1
+        done
+        echo
+        curl -fsS http://localhost:3100/health | grep -q '"ok"'
+        curl -fsS http://localhost:3100/catalog/products | grep -q 'sku' || { cat smoke.log; exit 1; }

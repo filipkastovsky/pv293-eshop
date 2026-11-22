@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "assets": [
+      {
+        "include": "platform/timeline/db/migrations/**/*",
+        "watchAssets": true
+      },
+      {
+        "include": "catalog/db/migrations/**/*",
+        "watchAssets": true
+      },
+      {
+        "include": "payment/db/migrations/**/*",
+        "watchAssets": true
+      },
+      {
+        "include": "notifications/db/migrations/**/*",
+        "watchAssets": true
+      }
+    ]
+  }
+}
