@@ -53,7 +53,7 @@ describe('catalog', () => {
     expect(await count()).toBe(5);
     const { body } = await http().get('/catalog/products').expect(200);
     expect(body.map((p: { sku: string }) => p.sku).sort()).toEqual(
-      ['BEER-01', 'CHEESE-01', 'HOODIE-01', 'MAT-01', 'MUG-01'].sort(),
+      ['BEER-01', 'CHEESE-01', 'HOODIE-01', 'MAT-01', 'CUP-01'].sort(),
     );
     expect(body.find((p: { sku: string }) => p.sku === 'HOODIE-01').price).toBe(
       120.13,
