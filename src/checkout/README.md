@@ -48,4 +48,4 @@ Asks `GetProduct` (answered by Catalog) for item prices.
 - `DELETE /carts/:cartId/items/:sku`
 - `POST /carts/:cartId/checkout` `{ customerEmail }` -> 201 `{ orderId }`
 - `POST /orders/:orderId/place` -> 202
-- `GET /orders/:orderId` -> `OrderSummary`
+- `GET /orders/:orderId` -> `OrderSummary` (404 for an unknown order)
