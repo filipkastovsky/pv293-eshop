@@ -10,7 +10,7 @@ import * as inventory from './events/inventory';
 import * as notifications from './events/notifications';
 import * as payment from './events/payment';
 
-export const EVENT_TYPES: Record<string, new (payload: never) => DomainEvent> =
+export const EVENT_TYPES: Record<string, new (payload: object) => DomainEvent> =
   {
     ...catalog,
     ...checkout,
@@ -25,5 +25,5 @@ export function eventFromJson(name: string, payload: unknown): DomainEvent {
   if (payload === null || typeof payload !== 'object') {
     throw new InvalidEventPayloadError(name, 'payload must be an object');
   }
-  return new EVENT_TYPES[name](payload as never);
+  return new EVENT_TYPES[name](payload);
 }

@@ -43,6 +43,10 @@ describe('contracts registry', () => {
     expect(again.occurredAt).toBe(e.occurredAt);
   });
 
+  it('EVENT_TYPES entries are directly constructible', () => {
+    expect(new EVENT_TYPES.OrderPaid({ orderId: 'o' })).toBeDefined();
+  });
+
   it('unknown name throws UnknownEventError', () => {
     expect(() => eventFromJson('Nope', {})).toThrow(UnknownEventError);
   });
