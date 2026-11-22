@@ -9,7 +9,7 @@ teams. Every green `main` is deployed to the lab cluster once the lab deploy cre
 
 ## Quick start
 
-Requirements: Node.js 24 (`.nvmrc`) and Docker or Podman.
+Requirements: Node.js >= 24.15 (`.nvmrc`; enforced by `engines`) and Docker or Podman.
 
 ```bash
 docker compose up -d        # PostgreSQL 17 on localhost:5432 (eshop/eshop/eshop); or: podman compose up -d
@@ -26,6 +26,17 @@ npm run docs:check          # ADRs, ADR index and module READMEs
 npm test                    # unit and module tests (need the database)
 npm run test:e2e            # black-box tests over HTTP (need the database)
 ```
+
+Run a single test file:
+
+```bash
+npm test -- path/to/file.spec.ts
+npm run test:e2e -- test/milestones/inventory.e2e-spec.ts
+```
+
+Always go through the npm scripts: bare `npx jest` fails with `ERR_REQUIRE_ESM`, because Nest 12 is
+ESM-only and the scripts add `node --experimental-vm-modules`. The resulting VM Modules
+`ExperimentalWarning` is expected.
 
 Environment: `DATABASE_URL` (default `postgres://eshop:eshop@localhost:5432/eshop`), `PORT`
 (default `3000`), `DEV_ENDPOINTS` (`true` enables `/dev/*`).
