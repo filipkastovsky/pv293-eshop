@@ -5,7 +5,7 @@ PV293 Software Architectures - e-shop modular monolith.
 An online shop built as one NestJS application with six modules, one per bounded context:
 Catalog, Checkout, Inventory, Fulfilment, Payment and Notifications. Catalog, Payment and
 Notifications are built; Checkout (Team A) and Inventory and Fulfilment (Team B) are built by the
-teams. Every green `main` is deployed to the lab cluster.
+teams. Every green `main` is deployed to the lab cluster once the lab deploy credential is configured.
 
 ## Quick start
 
@@ -72,4 +72,5 @@ The full rules for people and coding agents are in [AGENTS.md](AGENTS.md).
     `src/contracts/` (e.g. `POST /dev/emit/OrderPaid` `{ "orderId": "..." }`), so a module can be
     driven without the other team's code.
   - `POST /dev/chaos` `{ "handler": "ReserveStockPolicy" }` makes the next
-    `ChaosService.maybeFail('ReserveStockPolicy')` call throw once.
+    `ChaosService.maybeFail('ReserveStockPolicy')` call throw once. An armed handler stays armed
+    until it fires or the app restarts.

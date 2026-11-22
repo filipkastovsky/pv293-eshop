@@ -77,7 +77,7 @@ jobs:
           if [ -n "$LAB_KUBECONFIG" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
-            echo "LAB_KUBECONFIG is not set, skipping deploy"
+            echo "::warning::LAB_KUBECONFIG not set — nothing deployed"
           fi
       - if: steps.gate.outputs.enabled == 'true'
         name: Set up kubeconfig

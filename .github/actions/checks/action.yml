@@ -32,11 +32,16 @@ runs:
         psql -h localhost -U eshop -d eshop -c 'CREATE DATABASE smoke'
         node dist/main.js > smoke.log 2>&1 &
         pid=$!
-        trap 'kill "$pid" 2>/dev/null || true' EXIT
+        trap 'rc=$?; [ "$rc" -eq 0 ] || cat smoke.log; kill "$pid" 2>/dev/null || true' EXIT
+        up=0
         for _ in $(seq 1 30); do
-          curl -fs http://localhost:3100/health && break
+          if curl -fs http://localhost:3100/health > /dev/null; then up=1; break; fi
           sleep 1
         done
-        echo
-        curl -fsS http://localhost:3100/health | grep -q '"ok"'
-        curl -fsS http://localhost:3100/catalog/products | grep -q 'sku' || { cat smoke.log; exit 1; }
+        [ "$up" -eq 1 ] || { echo "health check timed out"; exit 1; }
+        health=$(curl -sS -w '\n%{http_code}' http://localhost:3100/health)
+        echo "$health"
+        [ "${health##*$'\n'}" = "200" ] || { echo "health not 200"; exit 1; }
+        [[ "$health" == *'"ok"'* ]] || { echo "health body lacks ok"; exit 1; }
+        products=$(curl -fsS http://localhost:3100/catalog/products)
+        [[ "$products" == *sku* ]] || { echo "catalog check failed"; exit 1; }

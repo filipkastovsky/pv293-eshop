@@ -70,7 +70,7 @@ The happy path of one order, as it appears on its timeline:
 6. Fulfilment reacts to `OrderPaid`: `OrderPacked`
 
 When stock runs out, Inventory publishes `StockReservationFailed`, Checkout cancels the order
-(`OrderCancelled`), Inventory releases anything it held for that order (`StockReleased`) and
+(`OrderCancelled`), Inventory releases anything it held for that order if it held anything (`StockReleased`; with all-or-nothing reservations nothing is held on this path) and
 Notifications sends a cancellation notice (`CancellationNoticeSent`). When the payment provider declines, Payment publishes `PaymentFailed`
 and the order stays placed.
 
@@ -155,7 +155,7 @@ flowchart LR
 - One PostgreSQL database with one schema per module and one for the platform. Each module's
   migrations run on start-up and are a no-op when already applied.
 - Every pull request runs the full checks and cannot merge red. After a merge, `main` runs them
-  again, including the end-to-end happy path; only a green `main` is built into an image and
+  again, including the end-to-end happy path (`test/happy-path.e2e-spec.ts`, skipped until all three team modules work and un-skipped then by the instructor at milestone 4); only a green `main` is built into an image and
   rolled out to the lab cluster by a pipeline identity that can update this one application
   ([0007](adr/0007-deploy-every-green-main.md)).
 - Locally the application runs with `npm run start:dev` against the PostgreSQL from
