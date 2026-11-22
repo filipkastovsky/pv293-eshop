@@ -16,6 +16,10 @@
       {
         "include": "payment/db/migrations/**/*",
         "watchAssets": true
+      },
+      {
+        "include": "notifications/db/migrations/**/*",
+        "watchAssets": true
       }
     ]
   }
