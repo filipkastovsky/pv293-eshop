@@ -12,6 +12,10 @@
       {
         "include": "catalog/db/migrations/**/*",
         "watchAssets": true
+      },
+      {
+        "include": "payment/db/migrations/**/*",
+        "watchAssets": true
       }
     ]
   }
