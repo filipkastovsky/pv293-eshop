@@ -21,6 +21,7 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
   private timer?: NodeJS.Timeout;
   private running?: Promise<void>;
   private rerun = false;
+  private stopped = false;
 
   constructor(
     private readonly outbox: OutboxRepository,
@@ -34,12 +35,14 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    this.stopped = true;
     clearInterval(this.timer);
-    await this.running;
+    while (this.running) await this.running;
   }
 
   /** Run now; if a run is in progress, run once more right after it. */
   nudge(): void {
+    if (this.stopped) return;
     if (this.running) {
       this.rerun = true;
       return;

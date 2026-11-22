@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   bigint,
   jsonb,
@@ -5,21 +6,31 @@ import {
   pgSchema,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
 export const payment = pgSchema('payment');
 
-export const payments = payment.table('payments', {
-  id: uuid('id').primaryKey(),
-  orderId: text('order_id').notNull(),
-  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
-  status: text('status').notNull(),
-  failureReason: text('failure_reason'),
-  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
-    .notNull()
-    .defaultNow(),
-});
+export const payments = payment.table(
+  'payments',
+  {
+    id: uuid('id').primaryKey(),
+    orderId: text('order_id').notNull(),
+    amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+    status: text('status').notNull(),
+    failureReason: text('failure_reason'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // At most one live payment per order; a failed one may be retried.
+    uniqueIndex('payments_live_order_idx')
+      .on(t.orderId)
+      .where(sql`${t.status} in ('initiated', 'succeeded')`),
+  ],
+);
 
 /** Events waiting to be published; written in the same transaction as the state change. */
 export const outbox = payment.table('outbox', {

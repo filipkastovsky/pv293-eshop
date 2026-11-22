@@ -8,10 +8,10 @@ import {
   PaymentInitiated,
   PaymentSucceeded,
 } from '../../contracts';
-import { PaymentGateway } from '../adapters/gateway/payment-gateway.port';
 import { Payment } from '../domain/payment';
 import { OutboxRelay } from '../outbox/outbox.relay';
 import { PaymentRepository } from './payment.repository';
+import { PaymentProvider } from './payment-provider';
 
 /** Pay for a placed order. Events leave only through the outbox, never straight to the bus. */
 @Injectable()
@@ -19,7 +19,7 @@ export class PayForOrder {
   constructor(
     private readonly queries: QueryBus,
     private readonly payments: PaymentRepository,
-    private readonly gateway: PaymentGateway,
+    private readonly provider: PaymentProvider,
     private readonly relay: OutboxRelay,
   ) {}
 
@@ -41,9 +41,9 @@ export class PayForOrder {
     this.relay.nudge();
 
     // Outside any transaction: the provider call may be slow.
-    const answer = await this.gateway.charge(payment.id, payment.amount);
+    const outcome = await this.provider.collect(payment.id, payment.amount);
 
-    if (answer === 'succeeded') {
+    if (outcome === 'approved') {
       payment.succeed();
       await this.payments.saveOutcome(
         payment,

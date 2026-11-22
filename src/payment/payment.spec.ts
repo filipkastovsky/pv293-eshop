@@ -144,11 +144,36 @@ describe('payment', () => {
     await bare.close();
   });
 
+  it('paying twice -> 202 then 409, one payment', async () => {
+    const o = order('placed', 10);
+    orders.set(o.orderId, o);
+    await pay(o.orderId).expect(202);
+    await pay(o.orderId).expect(409);
+    const { rows } = await db.pool.query(
+      'SELECT 1 FROM payment.payments WHERE order_id = $1',
+      [o.orderId],
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it('a retry after a decline is allowed', async () => {
+    const o = order('placed', 50.13);
+    orders.set(o.orderId, o);
+    await pay(o.orderId).expect(202);
+    await pay(o.orderId).expect(202);
+  });
+
   it('event row is written in the same transaction as the payment (roll back the transaction -> no outbox row)', async () => {
     const repo = app.get(PaymentRepository);
+    const outboxRepo = app.get(OutboxRepository);
+    const realAdd = outboxRepo.add.bind(outboxRepo);
+    // The row really is written; the failure comes after it, so it must roll back.
     const spy = jest
-      .spyOn(app.get(OutboxRepository), 'add')
-      .mockRejectedValueOnce(new Error('boom'));
+      .spyOn(outboxRepo, 'add')
+      .mockImplementationOnce(async (tx, e) => {
+        await realAdd(tx, e);
+        throw new Error('boom');
+      });
     const before = {
       payments: await count('payments'),
       outbox: await count('outbox'),
