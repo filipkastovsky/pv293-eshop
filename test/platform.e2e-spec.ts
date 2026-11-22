@@ -117,6 +117,29 @@ describe('platform (dev endpoints on)', () => {
     expect(b3.entries[0].kind).toBe('event');
   });
 
+  it('same-timestamp events keep emit order', async () => {
+    const occurredAt = new Date().toISOString();
+    for (let i = 0; i < 5; i++) {
+      const id = `o-ord-${i}`;
+      await request(app.getHttpServer())
+        .post('/dev/emit/OrderPlaced')
+        .send({ ...placed(id), occurredAt })
+        .expect(202);
+      await request(app.getHttpServer())
+        .post('/dev/emit/OrderPaid')
+        .send({ orderId: id, occurredAt })
+        .expect(202);
+      const body = await eventually(
+        () => timeline(id),
+        (b) => b.entries.length >= 2,
+      );
+      expect(body.entries.map((e: { name: string }) => e.name)).toEqual([
+        'OrderPlaced',
+        'OrderPaid',
+      ]);
+    }
+  });
+
   it('unknown event name -> 400 and nothing recorded', async () => {
     await request(app.getHttpServer())
       .post('/dev/emit/Nope')

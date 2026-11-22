@@ -1,5 +1,5 @@
 {
-  "id": "c052ebb3-e3a1-4520-9295-2f4a2f61e0bc",
+  "id": "12cc3712-f995-42e3-9795-ad2930fa8d5f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -14,6 +14,23 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
+        },
+        "seq": {
+          "name": "seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "timeline_seq_seq",
+            "schema": "platform",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
         },
         "order_id": {
           "name": "order_id",

@@ -14,7 +14,7 @@ export class TimelineController {
       .select()
       .from(timeline)
       .where(eq(timeline.orderId, orderId))
-      .orderBy(asc(timeline.at));
+      .orderBy(asc(timeline.at), asc(timeline.seq));
     return {
       orderId,
       entries: rows.map((r) => ({
