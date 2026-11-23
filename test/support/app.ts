@@ -1,7 +1,8 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Provider } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { createTestDb, TestDb } from '../setup-db';
+import { resetTelemetry } from './telemetry';
 
 export interface TimelineEntry {
   at: string;
@@ -29,8 +30,14 @@ const isSubsequence = (names: string[], wanted: string[]) => {
   return i === wanted.length;
 };
 
+export interface BootOptions {
+  /** Extra providers next to AppModule, e.g. a test-only event handler. */
+  providers?: Provider[];
+}
+
 /** Boots the whole app (all modules) against a fresh throwaway database. */
-export async function bootTestApp(): Promise<TestApp> {
+export async function bootTestApp(options: BootOptions = {}): Promise<TestApp> {
+  resetTelemetry();
   const db: TestDb = await createTestDb();
   process.env.DATABASE_URL = db.url;
   process.env.DEV_ENDPOINTS = 'true';
@@ -38,6 +45,7 @@ export async function bootTestApp(): Promise<TestApp> {
   const { AppModule } = require('../../src/app.module');
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
+    providers: options.providers ?? [],
   }).compile();
   const app: INestApplication = moduleRef.createNestApplication();
   await app.init();

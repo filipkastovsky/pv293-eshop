@@ -6,6 +6,7 @@ import { OrderEvent } from '../../contracts';
 import { ChaosError } from '../chaos/chaos.service';
 import { DB } from '../db/db.tokens';
 import { migrateModule } from '../db/migrate-module';
+import { failedHandler } from '../telemetry/handler-context';
 import { timeline } from './db/schema';
 
 /** Projects every order-scoped event and every handler failure into `platform.timeline`. */
@@ -43,8 +44,9 @@ export class TimelineRecorder implements OnModuleInit {
       void this.record({
         orderId: cause.orderId,
         kind: 'handler_failed',
-        // The CQRS bus does not say which handler threw; only injected failures name it.
-        name: exception instanceof ChaosError ? exception.handler : 'unknown',
+        name:
+          failedHandler(exception) ??
+          (exception instanceof ChaosError ? exception.handler : 'unknown'),
         payload: {
           error: error?.message ?? String(exception),
           event: cause.constructor.name,
