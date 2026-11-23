@@ -156,11 +156,16 @@ const STACK_LINE = /\n\s+at /;
 const isStack = (value: unknown): value is string =>
   typeof value === 'string' && STACK_LINE.test(value);
 
-const isPlainObject = (value: unknown): value is Fields => {
-  if (typeof value !== 'object' || value === null) return false;
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-};
+/**
+ * Anything whose own properties are data: plain objects and class instances (domain events),
+ * but not arrays, errors or dates.
+ */
+const isRecord = (value: unknown): value is Fields =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  !(value instanceof Error) &&
+  !(value instanceof Date);
 
 /**
  * Nest's `Logger` appends its context as the last string argument. A stack trace (Nest's
@@ -178,7 +183,8 @@ function splitContext(params: unknown[]): {
 }
 
 /**
- * Turns Nest's loose arguments into a message and fields: plain objects become fields, an
+ * Turns Nest's loose arguments into a message and fields: objects (plain or class instances,
+ * own enumerable properties) become fields, an
  * Error or a stack becomes `err.*`, and anything else thrown at `error` (a string, say) is
  * reported as the error too.
  */
@@ -194,8 +200,8 @@ function toRecord(
   if (message instanceof Error) {
     msg = message.message;
     fields = errorFields(message);
-  } else if (isPlainObject(message)) {
-    const { msg: m, message: mm, ...rest } = message;
+  } else if (isRecord(message)) {
+    const { msg: m, message: mm, ...rest } = { ...message };
     msg = String(m ?? mm ?? '');
     fields = { ...rest };
   } else {
@@ -204,7 +210,7 @@ function toRecord(
 
   for (const param of params) {
     if (param === undefined) continue;
-    if (isPlainObject(param)) {
+    if (isRecord(param)) {
       fields = { ...fields, ...param };
     } else if (param instanceof Error) {
       fields = { ...fields, ...errorFields(param) };
@@ -249,18 +255,19 @@ function stackFields(stack: string, known: Fields): Fields {
 
 /**
  * `customerEmail`, `to`, `email` and `*.customerEmail`, `*.to`, `*.email` → `[redacted]`.
- * Copies what it changes; the caller's objects stay as they were.
+ * Nested objects, class instances included, are copied as their own enumerable properties;
+ * the caller's objects stay as they were.
  */
 export function redact(fields: Fields): Fields {
   const out: Fields = {};
   for (const [key, value] of Object.entries(fields)) {
     if (REDACTED_KEYS.has(key)) {
       out[key] = CENSOR;
-    } else if (isPlainObject(value)) {
+    } else if (isRecord(value)) {
       out[key] = redactOneLevel(value);
     } else if (Array.isArray(value)) {
       out[key] = value.map((item) =>
-        isPlainObject(item) ? redactOneLevel(item) : item,
+        isRecord(item) ? redactOneLevel(item) : item,
       );
     } else {
       out[key] = value;

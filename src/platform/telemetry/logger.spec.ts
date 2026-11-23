@@ -2,6 +2,7 @@ import { Writable } from 'node:stream';
 import { SeverityNumber, trace } from '@opentelemetry/api';
 import { InMemoryLogRecordExporter } from '@opentelemetry/sdk-logs';
 import { InMemorySpanExporter } from '@opentelemetry/sdk-trace';
+import { OrderPlaced } from '../../contracts';
 import { runInHandlerContext } from './handler-context';
 import { PlatformLogger } from './logger';
 import { startTelemetry } from './telemetry';
@@ -241,6 +242,65 @@ describe('PlatformLogger', () => {
     expect(records()[1].attributes).toMatchObject({
       order: { customerEmail: '[redacted]', total: 5 },
     });
+  });
+
+  const orderPlaced = () =>
+    new OrderPlaced({
+      orderId: 'o-9',
+      customerEmail: 'ann@example.com',
+      lines: [{ sku: 'MUG-01', quantity: 1, unitPrice: 5 }],
+      total: 5,
+    });
+
+  it('redacts class instances nested under a key (a domain event) in stdout and OTel attributes', () => {
+    const { logger, lines } = capture();
+    const event = orderPlaced();
+    logger.log({ msg: 'placed', event }, 'Test');
+    logger.log('placed', { event }, 'Test');
+
+    expect(JSON.stringify(lines)).not.toContain('ann@example.com');
+    expect(
+      JSON.stringify(records().map((r) => [r.body, r.attributes])),
+    ).not.toContain('ann@example.com');
+    for (const line of lines) {
+      expect(line).toMatchObject({
+        msg: 'placed',
+        event: { orderId: 'o-9', customerEmail: '[redacted]', total: 5 },
+      });
+    }
+    for (const record of records()) {
+      expect(record.attributes).toMatchObject({
+        event: { orderId: 'o-9', customerEmail: '[redacted]', total: 5 },
+      });
+    }
+    expect(event.customerEmail).toBe('ann@example.com');
+  });
+
+  it('a class instance as a positional param becomes fields (log and error), redacted, no err.*', () => {
+    const { logger, lines } = capture();
+    logger.log('placed', orderPlaced(), 'Test');
+    logger.error('failed', orderPlaced(), 'Test');
+
+    expect(lines.map((l) => [l.level, l.msg])).toEqual([
+      ['info', 'placed'],
+      ['error', 'failed'],
+    ]);
+    for (const [i, line] of lines.entries()) {
+      expect(line).toMatchObject({
+        orderId: 'o-9',
+        customerEmail: '[redacted]',
+        total: 5,
+      });
+      expect(Object.keys(line).filter((k) => k.startsWith('err.'))).toEqual([]);
+      expect(records()[i].attributes).toMatchObject({
+        orderId: 'o-9',
+        customerEmail: '[redacted]',
+      });
+      expect(records()[i].attributes).not.toHaveProperty('err.type');
+    }
+    expect(
+      JSON.stringify([lines, records().map((r) => r.attributes)]),
+    ).not.toContain('ann@example.com');
   });
 
   it('does not mutate the objects it is given', () => {
