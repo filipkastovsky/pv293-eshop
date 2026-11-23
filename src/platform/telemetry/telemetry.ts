@@ -136,6 +136,11 @@ export function rateLimitedDiagLogger(
   };
 }
 
+/** Orchestrator probes: a trace every few seconds per pod would drown the real ones. */
+export function isHealthProbe(req: { method?: string; url?: string }): boolean {
+  return req.method === 'GET' && req.url?.split('?')[0] === '/health';
+}
+
 let instance: Telemetry | undefined;
 
 /**
@@ -157,7 +162,7 @@ export function startTelemetry(opts: TelemetryOptions = {}): Telemetry {
     autoDetectResources: false,
     resource,
     instrumentations: [
-      new HttpInstrumentation(),
+      new HttpInstrumentation({ ignoreIncomingRequestHook: isHealthProbe }),
       new ExpressInstrumentation(),
       new PgInstrumentation({ requireParentSpan: true }),
     ],

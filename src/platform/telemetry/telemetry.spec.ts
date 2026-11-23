@@ -2,6 +2,7 @@ import { logs, trace } from '@opentelemetry/api';
 import { InMemoryLogRecordExporter } from '@opentelemetry/sdk-logs';
 import { InMemorySpanExporter } from '@opentelemetry/sdk-trace';
 import {
+  isHealthProbe,
   rateLimitedDiagLogger,
   startTelemetry,
   telemetryConfig,
@@ -102,5 +103,21 @@ describe('startTelemetry', () => {
     const [record] = logExporter.getFinishedLogRecords();
     expect(record.body).toBe('inside');
     expect(record.spanContext?.traceId).toBe(span.spanContext().traceId);
+  });
+});
+
+describe('isHealthProbe', () => {
+  it('ignores GET /health, with or without a query string', () => {
+    expect(isHealthProbe({ method: 'GET', url: '/health' })).toBe(true);
+    expect(isHealthProbe({ method: 'GET', url: '/health?x=1' })).toBe(true);
+  });
+
+  it('keeps every other request traced', () => {
+    expect(isHealthProbe({ method: 'GET', url: '/catalog/products' })).toBe(
+      false,
+    );
+    expect(isHealthProbe({ method: 'POST', url: '/health' })).toBe(false);
+    expect(isHealthProbe({ method: 'GET', url: '/healthz' })).toBe(false);
+    expect(isHealthProbe({})).toBe(false);
   });
 });

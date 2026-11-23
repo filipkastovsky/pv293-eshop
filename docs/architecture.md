@@ -167,7 +167,8 @@ flowchart LR
 The platform makes the running system observable without any code in the modules
 ([0009](adr/0009-observe-through-opentelemetry.md)).
 
-- **Traces.** One trace per request. Publishing an event is a span `publish <EventName>`; each
+- **Traces.** One trace per request, except the orchestrator's `GET /health` probes, which are not
+  traced. HTTP spans carry `app.order_id` when the route has an `:orderId`. Publishing an event is a span `publish <EventName>`; each
   subscriber runs in `process <EventName>`; command and query handlers are spans named after the
   handler class. Spans carry `app.module`, `app.handler` and, when the event has one,
   `app.order_id`. A handler that throws marks its span as an error and names the handler.
@@ -176,14 +177,15 @@ The platform makes the running system observable without any code in the modules
   the state change and the delivery is still connected.
 - **Logs.** One JSON line per record on stdout, and the same record sent as telemetry. When a span
   is active the record carries `trace_id` and `span_id`, so a log line and its trace point at each
-  other. Every HTTP request writes one access log line.
+  other. Every routed request that completes writes one access log line (`GET /health` at debug).
 - **Where it goes.** The application exports only when an endpoint is configured
   (`OTEL_EXPORTER_OTLP_ENDPOINT`); otherwise nothing leaves the process. In the lab the telemetry
   goes to the cluster's collector and on to the hosted Grafana. Locally, see "Telemetry locally"
   in the [README](../README.md). Metrics are not exported.
 - **What modules must not do.** No tracer, span or telemetry import in a module; log with Nest's
   `Logger` and fields; never put personal data (a customer's email) in a log or on a span. The
-  platform redacts known fields as a safety net, not as permission.
+  platform redacts `*email*` and `to` fields at any depth, and drops a failed query's bound
+  parameters from error text, as a safety net, not as permission.
 
 ## 9. Decisions
 

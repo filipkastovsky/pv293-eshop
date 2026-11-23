@@ -45,9 +45,12 @@ runs:
         [[ "$health" == *'"ok"'* ]] || { echo "health body lacks ok"; exit 1; }
         products=$(curl -fsS http://localhost:3100/catalog/products)
         [[ "$products" == *sku* ]] || { echo "catalog check failed"; exit 1; }
+        curl -fsS http://localhost:3100/orders/smoke-order/timeline > /dev/null
         span=0
         for _ in $(seq 1 10); do
-          if grep -q "GET /health" smoke.log; then span=1; break; fi
+          if grep -q "GET /catalog/products" smoke.log && grep -q "app.order_id.: 'smoke-order'" smoke.log; then span=1; break; fi
           sleep 1
         done
-        [ "$span" -eq 1 ] || { echo "no GET /health span in smoke.log"; exit 1; }
+        [ "$span" -eq 1 ] || { echo "no GET /catalog/products span, or no app.order_id on the order route span, in smoke.log"; exit 1; }
+        # Health probes are not traced.
+        ! grep -q "GET /health" smoke.log || { echo "GET /health must not be traced"; exit 1; }

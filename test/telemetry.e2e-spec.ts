@@ -193,6 +193,29 @@ describe('telemetry', () => {
     expect(warn.severityNumber).toBe(SeverityNumber.WARN);
   });
 
+  it('access log: a route with :orderId carries app.order_id; GET /health is not logged at info', async () => {
+    const orderId = `route-${randomUUID()}`;
+    logs.reset();
+    await t.http().get('/health').expect(200);
+    await t.http().get(`/orders/${orderId}/timeline`).expect(200);
+
+    const access = await waitForLog(
+      (r) =>
+        r.body === 'request completed' &&
+        r.attributes['http.route'] === '/orders/:orderId/timeline',
+    );
+    expect(access.attributes).toMatchObject({ 'app.order_id': orderId });
+
+    const info = logs
+      .getFinishedLogRecords()
+      .filter(
+        (r) =>
+          r.body === 'request completed' &&
+          r.attributes['http.route'] === '/health',
+      );
+    expect(info).toEqual([]);
+  });
+
   it('non-chaos Error from a handler → ERROR span with exception event; timeline handler_failed name = handler class', async () => {
     const orderId = `boom-${randomUUID()}`;
     await t.emit('OrderPlaced', placed(orderId));
