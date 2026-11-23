@@ -16,10 +16,14 @@ describe('TimelineRecorder', () => {
     const suppressed: boolean[] = [];
     const db = {
       insert: () => ({
-        values: () => {
-          suppressed.push(isTracingSuppressed(context.active()));
-          return Promise.resolve();
-        },
+        // Lazy like Drizzle's builder: the query runs when it is awaited (`then`).
+        values: () => ({
+          // biome-ignore lint/suspicious/noThenProperty: mimics Drizzle's thenable query builder
+          then: (resolve: () => void) => {
+            suppressed.push(isTracingSuppressed(context.active()));
+            resolve();
+          },
+        }),
       }),
     };
     let onEvent: (event: unknown) => void = () => undefined;
