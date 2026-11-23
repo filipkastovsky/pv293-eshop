@@ -133,6 +133,18 @@ describe('docs-check', () => {
     expect(errors()).toContainEqual(expect.stringMatching(/gap.*0002/i));
   });
 
+  it('allows a gap for a number the index lists as open', () => {
+    write('docs/adr/0004-fourth-decision.md', adr('0004', 'Fourth decision'));
+    write(
+      'docs/adr/README.md',
+      INDEX.replace(
+        '\n0003',
+        '| [0004](0004-fourth-decision.md) | Fourth decision | accepted |\n\n- 0003',
+      ),
+    );
+    expect(errors()).toEqual([]);
+  });
+
   it('fails on duplicate ADR numbers', () => {
     write('docs/adr/0002-other-decision.md', adr('0002', 'Other decision'));
     expect(errors()).toContainEqual(expect.stringMatching(/duplicate.*0002/i));

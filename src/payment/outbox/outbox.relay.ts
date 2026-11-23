@@ -5,9 +5,16 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { EventBus } from '@nestjs/cqrs';
+import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
 import { eventFromJson } from '../../contracts';
+import { linkFrom } from '../../platform';
 import { OutboxRepository } from './outbox.repository';
 
+type OutboxRow = Awaited<
+  ReturnType<OutboxRepository['findUnpublished']>
+>[number];
+
+const TRACER = 'pv293-eshop/outbox';
 const POLL_MS = 500;
 const BATCH = 100;
 
@@ -56,13 +63,39 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
     });
   }
 
+  /**
+   * One row = one new root span, linked (not parented) to the request that wrote the row: the
+   * relay runs seconds later, outside any request. Publish and mark happen inside it.
+   */
+  private relay(row: OutboxRow): Promise<void> {
+    return trace.getTracer(TRACER).startActiveSpan(
+      `outbox.relay ${row.eventName}`,
+      {
+        root: true,
+        kind: SpanKind.CONSUMER,
+        links: linkFrom(row.traceContext),
+      },
+      async (span) => {
+        try {
+          this.eventBus.publish(eventFromJson(row.eventName, row.payload));
+          await this.outbox.markPublished(row.id);
+        } catch (error) {
+          span.recordException(error as Error);
+          span.setStatus({ code: SpanStatusCode.ERROR });
+          throw error;
+        } finally {
+          span.end();
+        }
+      },
+    );
+  }
+
   private async drain(): Promise<void> {
     try {
       for (;;) {
         const rows = await this.outbox.findUnpublished(BATCH);
         for (const row of rows) {
-          this.eventBus.publish(eventFromJson(row.eventName, row.payload));
-          await this.outbox.markPublished(row.id);
+          await this.relay(row);
         }
         if (rows.length < BATCH) return;
       }

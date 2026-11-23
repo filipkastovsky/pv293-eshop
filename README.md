@@ -9,7 +9,7 @@ teams. Every green `main` is deployed to the lab cluster once the lab deploy cre
 
 ## Quick start
 
-Requirements: Node.js >= 24.15 (`.nvmrc`; enforced by `engines`) and Docker or Podman.
+Requirements: Node.js >= 26 (`.nvmrc`; enforced by `engines`) and Docker or Podman.
 
 ```bash
 docker compose up -d        # PostgreSQL 17 on localhost:5432 (eshop/eshop/eshop); or: podman compose up -d
@@ -62,6 +62,7 @@ The full rules for people and coding agents are in [AGENTS.md](AGENTS.md).
   `npm run db:generate -- <module>` and applied on start-up.
 - **Biome**: formatting, linting and the module border check (`noRestrictedImports` per module in
   `biome.json`), all in `npm run lint`.
+- **OpenTelemetry**: traces and logs from the platform, exported only when an endpoint is set (see below).
 - **Jest + supertest**: unit and module tests (`npm test`), black-box end-to-end tests (`npm run test:e2e`).
 
 ## Documentation
@@ -85,3 +86,16 @@ The full rules for people and coding agents are in [AGENTS.md](AGENTS.md).
   - `POST /dev/chaos` `{ "handler": "ReserveStockPolicy" }` makes the next
     `ChaosService.maybeFail('ReserveStockPolicy')` call throw once. An armed handler stays armed
     until it fires or the app restarts.
+
+## Telemetry locally
+
+Optional. The application exports telemetry only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. To
+look at your own traces and logs, start a local Grafana and point the application at it:
+
+```bash
+docker compose --profile otel up -d
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 npm run start:dev
+```
+
+Grafana is on <http://localhost:3001> (Explore, then Tempo for traces, Loki for logs). Do not
+point a local application at the lab. `docker compose up` without the profile starts only PostgreSQL.

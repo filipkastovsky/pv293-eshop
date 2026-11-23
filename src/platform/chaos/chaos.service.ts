@@ -1,4 +1,5 @@
 import { Global, Injectable, Module } from '@nestjs/common';
+import { trace } from '@opentelemetry/api';
 
 export class ChaosError extends Error {
   constructor(readonly handler: string) {
@@ -17,7 +18,11 @@ export class ChaosService {
   }
 
   maybeFail(handlerName: string): void {
-    if (this.armed.delete(handlerName)) throw new ChaosError(handlerName);
+    if (!this.armed.delete(handlerName)) return;
+    trace
+      .getActiveSpan()
+      ?.addEvent('chaos.injected', { 'app.handler': handlerName });
+    throw new ChaosError(handlerName);
   }
 }
 

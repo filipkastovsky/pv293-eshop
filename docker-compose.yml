@@ -10,5 +10,14 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Optional local telemetry: docker compose --profile otel up -d
+  otel-lgtm:
+    image: grafana/otel-lgtm:0.41.1
+    profiles: [otel]
+    ports:
+      - '3001:3000'
+      - '4317:4317'
+      - '4318:4318'
+
 volumes:
   pgdata:

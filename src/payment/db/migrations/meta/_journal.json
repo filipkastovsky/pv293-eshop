@@ -15,6 +15,13 @@
       "when": 1795366492562,
       "tag": "0001_lumpy_madelyne_pryor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795442084367,
+      "tag": "0002_tiny_patch",
+      "breakpoints": true
     }
   ]
 }

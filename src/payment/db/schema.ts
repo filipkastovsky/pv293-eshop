@@ -39,6 +39,8 @@ export const outbox = payment.table('outbox', {
   seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity().notNull(),
   eventName: text('event_name').notNull(),
   payload: jsonb('payload').notNull(),
+  // W3C trace context of the request that wrote the row; the relay links its span to it.
+  traceContext: jsonb('trace_context'),
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
     .notNull()
     .defaultNow(),
