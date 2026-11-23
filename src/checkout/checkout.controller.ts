@@ -54,7 +54,11 @@ export class CheckoutController {
   ): Promise<void> {
     const sku = requiredText(body?.sku, 'sku');
     const quantity = body?.quantity;
-    if (typeof quantity !== 'number' || !Number.isSafeInteger(quantity) || quantity <= 0) {
+    if (
+      typeof quantity !== 'number' ||
+      !Number.isSafeInteger(quantity) ||
+      quantity <= 0
+    ) {
       throw new BadRequestException('quantity must be a positive integer');
     }
     await this.carts.addItem(requiredText(cartId, 'cartId'), sku, quantity);
@@ -62,8 +66,14 @@ export class CheckoutController {
 
   @Delete('carts/:cartId/items/:sku')
   @HttpCode(204)
-  async removeItem(@Param('cartId') cartId: string, @Param('sku') sku: string): Promise<void> {
-    await this.carts.removeItem(requiredText(cartId, 'cartId'), requiredText(sku, 'sku'));
+  async removeItem(
+    @Param('cartId') cartId: string,
+    @Param('sku') sku: string,
+  ): Promise<void> {
+    await this.carts.removeItem(
+      requiredText(cartId, 'cartId'),
+      requiredText(sku, 'sku'),
+    );
   }
 
   @Post('carts/:cartId/checkout')
@@ -72,10 +82,18 @@ export class CheckoutController {
     @Body() body: { customerEmail?: unknown },
   ): Promise<{ orderId: string }> {
     const customerEmail = requiredText(body?.customerEmail, 'customerEmail');
-    if (customerEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
-      throw new BadRequestException('customerEmail must be a valid email address');
+    if (
+      customerEmail.length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)
+    ) {
+      throw new BadRequestException(
+        'customerEmail must be a valid email address',
+      );
     }
-    const orderId = await this.carts.checkOut(requiredText(cartId, 'cartId'), customerEmail);
+    const orderId = await this.carts.checkOut(
+      requiredText(cartId, 'cartId'),
+      customerEmail,
+    );
     return { orderId };
   }
 
@@ -87,7 +105,9 @@ export class CheckoutController {
 
   @Get('orders/:orderId')
   async orderSummary(@Param('orderId') orderId: string) {
-    const order = await this.queries.execute(new GetOrderSummary(requiredText(orderId, 'orderId')));
+    const order = await this.queries.execute(
+      new GetOrderSummary(requiredText(orderId, 'orderId')),
+    );
     if (!order) throw new NotFoundException('Order not found');
     return order;
   }

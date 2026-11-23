@@ -26,7 +26,10 @@ export class OrderService {
 
   async cancelOrder(orderId: string): Promise<void> {
     const order = await this.transition(orderId, (order) => order?.cancel());
-    if (order) this.events.publish(new OrderCancelled({ orderId, reason: 'out of stock' }));
+    if (order)
+      this.events.publish(
+        new OrderCancelled({ orderId, reason: 'out of stock' }),
+      );
   }
 
   private transition(

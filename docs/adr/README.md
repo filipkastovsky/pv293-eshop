@@ -13,11 +13,8 @@ reasoning behind it.
 | [0005](0005-integration-through-contracts.md) | Modules integrate only through contracts: events and public queries | accepted |
 | [0006](0006-internal-architecture-per-module.md) | Internal architecture is each module's own choice | accepted |
 | [0007](0007-deploy-every-green-main.md) | Deploy every green `main` automatically | accepted |
+| [0008](0008-recover-event-handling-by-impact.md) | Recover event handling by business impact | proposed |
 | [0009](0009-observe-through-opentelemetry.md) | Observe the system through a vendor-neutral telemetry standard | accepted |
-
-Open:
-
-- 0008 — What happens to an event when its handler fails? — open, not yet written
 
 ## How we write ADRs
 

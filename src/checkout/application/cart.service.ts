@@ -50,7 +50,9 @@ export class CartService {
 
       cart.checkOut();
       // Catalog shares the database pool. Read prices before opening a transaction.
-      const lines = await Promise.all(cart.items.map((item) => this.price(item)));
+      const lines = await Promise.all(
+        cart.items.map((item) => this.price(item)),
+      );
       const checkedOut = new CartCheckedOut({ cartId, customerEmail, lines });
       const order = await this.store.transaction(async (tx) => {
         const current = await this.store.lockCart(tx, cartId);
@@ -73,8 +75,10 @@ export class CartService {
 
   private async price({ sku, quantity }: CartItem) {
     const product = await this.queries.execute(new GetProduct(sku));
-    if (!product) throw new NotFoundException('Cart contains an unknown product');
-    if (!product.available) throw new CheckoutConflict('Cart contains a discontinued product');
+    if (!product)
+      throw new NotFoundException('Cart contains an unknown product');
+    if (!product.available)
+      throw new CheckoutConflict('Cart contains a discontinued product');
     return { sku, quantity, unitPrice: product.price };
   }
 }

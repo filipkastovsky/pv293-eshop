@@ -62,7 +62,7 @@ Chosen: **Option A**. Rules:
 - Delivery is in-process (0002).
 
 **Not decided here:** what happens when a subscriber fails while handling an event (lost, retried,
-rolled back). Left open on purpose; see 0008.
+rolled back). Left open on purpose; see [0008](0008-recover-event-handling-by-impact.md).
 
 ## Consequences
 
@@ -81,5 +81,5 @@ rolled back). Left open on purpose; see 0008.
 
 ## Links
 
-- Related: [0003](0003-module-borders-follow-bounded-contexts.md), [0004](0004-each-module-owns-its-data.md), 0008 (open)
+- Related: [0003](0003-module-borders-follow-bounded-contexts.md), [0004](0004-each-module-owns-its-data.md), [0008](0008-recover-event-handling-by-impact.md)
 - PV293 Seminar 03, "Contexts talk to each other"

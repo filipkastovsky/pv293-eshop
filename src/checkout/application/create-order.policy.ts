@@ -10,6 +10,11 @@ export class CreateOrderPolicy {
 
   handle(event: CartCheckedOut): Order {
     this.chaos.maybeFail('CreateOrderPolicy');
-    return Order.create(randomUUID(), event.cartId, event.customerEmail, event.lines);
+    return Order.create(
+      randomUUID(),
+      event.cartId,
+      event.customerEmail,
+      event.lines,
+    );
   }
 }

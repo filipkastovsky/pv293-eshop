@@ -34,12 +34,22 @@ export class CheckoutStore implements OnModuleInit {
   }
 
   async findCart(cartId: string): Promise<Cart | null> {
-    const [row] = await this.db.select().from(carts).where(eq(carts.id, cartId));
+    const [row] = await this.db
+      .select()
+      .from(carts)
+      .where(eq(carts.id, cartId));
     return row ? new Cart(row.id, row.items, row.checkedOut) : null;
   }
 
-  async lockCart(tx: CheckoutTransaction, cartId: string): Promise<Cart | null> {
-    const [row] = await tx.select().from(carts).where(eq(carts.id, cartId)).for('update');
+  async lockCart(
+    tx: CheckoutTransaction,
+    cartId: string,
+  ): Promise<Cart | null> {
+    const [row] = await tx
+      .select()
+      .from(carts)
+      .where(eq(carts.id, cartId))
+      .for('update');
     return row ? new Cart(row.id, row.items, row.checkedOut) : null;
   }
 
@@ -71,20 +81,40 @@ export class CheckoutStore implements OnModuleInit {
   }
 
   async findOrder(orderId: string): Promise<Order | null> {
-    const [row] = await this.db.select().from(orders).where(eq(orders.id, orderId));
+    const [row] = await this.db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId));
     return row ? this.toOrder(row) : null;
   }
 
-  async lockOrder(tx: CheckoutTransaction, orderId: string): Promise<Order | null> {
-    const [row] = await tx.select().from(orders).where(eq(orders.id, orderId)).for('update');
+  async lockOrder(
+    tx: CheckoutTransaction,
+    orderId: string,
+  ): Promise<Order | null> {
+    const [row] = await tx
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .for('update');
     return row ? this.toOrder(row) : null;
   }
 
   async saveOrderStatus(tx: CheckoutTransaction, order: Order): Promise<void> {
-    await tx.update(orders).set({ status: order.status }).where(eq(orders.id, order.id));
+    await tx
+      .update(orders)
+      .set({ status: order.status })
+      .where(eq(orders.id, order.id));
   }
 
   private toOrder(row: typeof orders.$inferSelect): Order {
-    return new Order(row.id, row.cartId, row.status, row.customerEmail, row.lines, row.totalInCents);
+    return new Order(
+      row.id,
+      row.cartId,
+      row.status,
+      row.customerEmail,
+      row.lines,
+      row.totalInCents,
+    );
   }
 }

@@ -11,16 +11,29 @@ describe('Checkout consistency', () => {
   it('keeps the cart editable after a failed checkout and creates one order on concurrent retries', async () => {
     const cartId = randomUUID();
     const add = (quantity: number) =>
-      t.http().post(`/carts/${cartId}/items`).send({ sku: 'BEER-01', quantity });
+      t
+        .http()
+        .post(`/carts/${cartId}/items`)
+        .send({ sku: 'BEER-01', quantity });
     const checkOut = () =>
-      t.http().post(`/carts/${cartId}/checkout`).send({ customerEmail: 'a@b.cz' });
+      t
+        .http()
+        .post(`/carts/${cartId}/checkout`)
+        .send({ customerEmail: 'a@b.cz' });
 
     await add(1).expect(201);
-    await t.http().post('/dev/chaos').send({ handler: 'CreateOrderPolicy' }).expect(202);
+    await t
+      .http()
+      .post('/dev/chaos')
+      .send({ handler: 'CreateOrderPolicy' })
+      .expect(202);
     await checkOut().expect(500);
     await add(2).expect(201);
 
-    const [first, second] = await Promise.all([checkOut().expect(201), checkOut().expect(201)]);
+    const [first, second] = await Promise.all([
+      checkOut().expect(201),
+      checkOut().expect(201),
+    ]);
     const { orderId } = first.body;
     expect(second.body).toEqual({ orderId });
     await add(1).expect(409);
@@ -35,7 +48,12 @@ describe('Checkout consistency', () => {
     // A real Inventory can reserve the order when this suite runs after M4.
     await t.http().post('/inventory/BEER-01/receive').send({ quantity: 3 });
     await t.http().post(`/orders/${orderId}/place`).expect(202);
-    const timeline = await t.waitForTimeline(orderId, ['OrderCreated', 'OrderPlaced']);
-    expect(timeline.filter(({ name }) => name === 'OrderCreated')).toHaveLength(1);
+    const timeline = await t.waitForTimeline(orderId, [
+      'OrderCreated',
+      'OrderPlaced',
+    ]);
+    expect(timeline.filter(({ name }) => name === 'OrderCreated')).toHaveLength(
+      1,
+    );
   });
 });

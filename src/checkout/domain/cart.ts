@@ -21,9 +21,13 @@ export class Cart {
   }
 
   hasSameItems(other: Cart): boolean {
-    return this.items.length === other.items.length && this.items.every(
-      ({ sku, quantity }, index) =>
-        other.items[index].sku === sku && other.items[index].quantity === quantity,
+    return (
+      this.items.length === other.items.length &&
+      this.items.every(
+        ({ sku, quantity }, index) =>
+          other.items[index].sku === sku &&
+          other.items[index].quantity === quantity,
+      )
     );
   }
 
@@ -36,7 +40,9 @@ export class Cart {
     }
     const item = { sku, quantity: newQuantity };
     this.currentItems = existing
-      ? this.currentItems.map((current) => (current === existing ? item : current))
+      ? this.currentItems.map((current) =>
+          current === existing ? item : current,
+        )
       : [...this.currentItems, item];
   }
 

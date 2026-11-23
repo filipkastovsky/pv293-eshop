@@ -198,15 +198,19 @@ The platform makes the running system observable without any code in the modules
 | [0005](adr/0005-integration-through-contracts.md)          | Modules integrate only through contracts: events and public queries |
 | [0006](adr/0006-internal-architecture-per-module.md)       | Internal architecture is each module's own choice                   |
 | [0007](adr/0007-deploy-every-green-main.md)                | Deploy every green `main` automatically                             |
+| [0008](adr/0008-recover-event-handling-by-impact.md)       | Recover event handling by business impact (proposed)                |
 | [0009](adr/0009-observe-through-opentelemetry.md)          | Observe the system through a vendor-neutral telemetry standard      |
 
 The [ADR index](adr/README.md) has the status of each.
 
-## 10. Open questions
+## 10. Event delivery and recovery
 
-- **What happens to an event when its handler fails?** Delivery is in-process. Today a reaction
-  that throws is reported (it shows as `handler_failed` on the order's timeline), the application
-  keeps running, and the chain for that order stops there: the event is not retried and the
-  publisher's change is not rolled back. Payment's outbox already delivers its events at least
-  once, so its subscribers can see a duplicate. Whether events may be lost, must be retried, or
-  must be handled exactly once is not decided. This is ADR 0008 (open).
+Delivery is in-process. When a reaction throws, the application keeps running and records
+`handler_failed` on the order's timeline for order events. Other subscribers can still complete.
+The bus leaves the publisher's committed change in place and does not retry the failed reaction.
+Payment's outbox retries publication if a row has no `published_at`, which can cause duplicate
+dispatch after a crash. `published_at` records dispatch to the bus.
+
+[ADR 0008](adr/0008-recover-event-handling-by-impact.md) proposes shared transactions for local
+invariants, durable recovery for required subscribers, and periodic reconciliation for missed
+customer messages. The proposal tracks completion per required subscriber.
