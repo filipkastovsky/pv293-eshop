@@ -64,9 +64,11 @@ export class TimelineRecorder implements OnModuleInit {
     this.queue = this.queue.then(async () => {
       try {
         // Platform plumbing: keep its pg spans out of the order's trace.
-        await context.with(suppressTracing(context.active()), () =>
-          this.db.insert(timeline).values(row),
-        );
+        // The query builder is lazy: it must run (be awaited) inside the callback, or the
+        // insert would execute outside the suppressed context.
+        await context.with(suppressTracing(context.active()), async () => {
+          await this.db.insert(timeline).values(row);
+        });
       } catch (err) {
         this.logger.error('Failed to record timeline entry', err);
       }
