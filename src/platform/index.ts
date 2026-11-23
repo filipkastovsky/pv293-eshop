@@ -7,3 +7,4 @@ export {
   failedHandler,
   type HandlerContext,
 } from './telemetry/handler-context';
+export { PlatformLogger } from './telemetry/logger';

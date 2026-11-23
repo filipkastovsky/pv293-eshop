@@ -1,6 +1,7 @@
 import { INestApplication, Provider } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
+import { PlatformLogger } from '../../src/platform/telemetry/logger';
 import { createTestDb, TestDb } from '../setup-db';
 import { resetTelemetry } from './telemetry';
 
@@ -46,8 +47,13 @@ export async function bootTestApp(options: BootOptions = {}): Promise<TestApp> {
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
     providers: options.providers ?? [],
-  }).compile();
+  })
+    // Records still reach the in-memory OTel exporter (`logs`); stdout stays clean.
+    .overrideProvider(PlatformLogger)
+    .useValue(new PlatformLogger({ destination: { write: () => undefined } }))
+    .compile();
   const app: INestApplication = moduleRef.createNestApplication();
+  app.useLogger(app.get(PlatformLogger));
   await app.init();
 
   let closed = false;

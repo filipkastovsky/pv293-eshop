@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
-import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import { SeverityNumber, SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import type { ReadableLogRecord } from '@opentelemetry/sdk-logs';
 import type { ReadableSpan } from '@opentelemetry/sdk-trace';
 import { OrderPlaced } from '../src/contracts';
 import { bootTestApp, TestApp } from './support/app';
-import { spans } from './support/telemetry';
+import { logs, spans } from './support/telemetry';
 
 /** Throws for orders whose id says so: an Error for `boom-*`, a plain string for `str-*`. */
 @EventsHandler(OrderPlaced)
@@ -33,6 +34,22 @@ async function waitForSpan(
     if (Date.now() > deadline) {
       const names = spans.getFinishedSpans().map((s) => s.name);
       throw new Error(`No matching span. Finished: [${names.join(', ')}]`);
+    }
+    await new Promise((r) => setTimeout(r, 25));
+  }
+}
+
+async function waitForLog(
+  predicate: (r: ReadableLogRecord) => boolean,
+  timeoutMs = 5_000,
+): Promise<ReadableLogRecord> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const found = logs.getFinishedLogRecords().find(predicate);
+    if (found) return found;
+    if (Date.now() > deadline) {
+      const bodies = logs.getFinishedLogRecords().map((r) => r.body);
+      throw new Error(`No matching log record. Got: ${JSON.stringify(bodies)}`);
     }
     await new Promise((r) => setTimeout(r, 25));
   }
@@ -119,6 +136,51 @@ describe('telemetry', () => {
     expect(chaos?.attributes).toEqual({
       'app.handler': 'SendOrderSummaryPolicy',
     });
+
+    // The bus's error log for this failure sits in the same trace as the ERROR span.
+    const traceId = span.spanContext().traceId;
+    const error = await waitForLog(
+      (r) =>
+        r.severityNumber === SeverityNumber.ERROR &&
+        r.spanContext?.traceId === traceId,
+    );
+    expect(error.body).toContain('SendOrderSummaryPolicy');
+    expect(error.attributes).toMatchObject({
+      logger: 'EventBus',
+      'err.type': 'ChaosError',
+      'err.message': 'Chaos: injected failure in SendOrderSummaryPolicy',
+    });
+  });
+
+  // Jest bypasses the http instrumentation's require hook, so there is no SERVER span here;
+  // the access record's trace correlation is checked against the built app instead.
+  it('access log: one record per request with the route template, status and duration', async () => {
+    const orderId = `http-${randomUUID()}`;
+    logs.reset();
+    await t.emit('OrderPlaced', placed(orderId));
+
+    const access = await waitForLog(
+      (r) =>
+        r.body === 'request completed' &&
+        r.attributes['http.route'] === '/dev/emit/:eventName',
+    );
+    expect(access.severityNumber).toBe(SeverityNumber.INFO);
+    expect(access.attributes).toMatchObject({
+      logger: 'AccessLog',
+      'http.request.method': 'POST',
+      'http.route': '/dev/emit/:eventName',
+      'http.response.status_code': 202,
+    });
+    expect(typeof access.attributes.duration_ms).toBe('number');
+
+    const missing = await t.http().post('/dev/emit/NoSuchEvent').send({});
+    expect(missing.status).toBe(400);
+    const warn = await waitForLog(
+      (r) =>
+        r.body === 'request completed' &&
+        r.attributes['http.response.status_code'] === missing.status,
+    );
+    expect(warn.severityNumber).toBe(SeverityNumber.WARN);
   });
 
   it('non-chaos Error from a handler → ERROR span with exception event; timeline handler_failed name = handler class', async () => {
@@ -171,6 +233,12 @@ describe('telemetry', () => {
       const attributes = [s.attributes, ...s.events.map((e) => e.attributes)];
       expect(JSON.stringify(attributes)).not.toContain(email);
       expect(s.name).not.toContain(email);
+    }
+
+    const records = logs.getFinishedLogRecords();
+    expect(records.length).toBeGreaterThan(0);
+    for (const r of records) {
+      expect(JSON.stringify([r.body, r.attributes])).not.toContain(email);
     }
   });
 
