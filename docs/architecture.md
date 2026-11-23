@@ -184,3 +184,5 @@ The [ADR index](adr/README.md) has the status of each.
   publisher's change is not rolled back. Payment's outbox already delivers its events at least
   once, so its subscribers can see a duplicate. Whether events may be lost, must be retried, or
   must be handled exactly once is not decided. This is ADR 0008 (open).
+
+<!-- flow test -->
