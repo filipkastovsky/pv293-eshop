@@ -56,9 +56,37 @@ Before the seminar check that every invitation was accepted
 - Every collaborator invitation has been accepted.
 - No chaos is left armed (a restart clears it).
 - Grafana Explore is open with the Tempo and Loki tabs and the saved TraceQL
-  `{ resource.service.name = "pv293-eshop" }`.
+  `{ resource.service.name = "pv293-eshop" }` (empty until the live platform merge).
+- The telemetry PR is open and green, not merged (see "Live platform merge").
 - After the seminar, check the Grafana Cloud budget (span metrics and service graph add series
   for one more service).
+
+## Live platform merge
+
+The telemetry PR (`feat/otel`) is merged **during** the seminar, on the projector, after the first
+team crosses a border (slide "A Platform Change, Live"). Until then the lab sends nothing to
+Grafana: no traces, and the pod's console logs are not collected.
+
+Before the seminar:
+
+- The PR is open, reviewed and green. Do not merge it.
+- It was dry-run on the lab: the branch image deployed by hand, traces and logs checked, then the
+  `main` image rolled back.
+- The `solution` branch is rebased onto `feat/otel`: it only has to work after the merge.
+
+In the room:
+
+1. Check the PR against the current `main`. A team that added `docs/adr/0008-*` to the ADR index
+   causes a one-line conflict in `docs/adr/README.md`: resolve it in the GitHub editor, keep both rows.
+2. Wait for the PR checks to go green, then merge.
+3. The deploy rolls out in a few minutes and restarts the box (chaos is cleared, payment migrates).
+   Talk through "What Just Happened To You" meanwhile.
+4. Students catch up: `nvm install 26 && nvm use`, `git pull --rebase origin main && npm ci`.
+   Open PRs re-run their checks on Node 26.
+5. In Grafana, wait for the first `pv293-eshop` trace, then arm chaos again for "Same Failure, Now Visible".
+
+If the deploy fails: revert the merge commit on `main` (the deploy rolls back with it) and continue
+without telemetry; the slides from "You Saw This In Seminar 02" on can be skipped.
 
 ## Telemetry (Grafana Cloud)
 
