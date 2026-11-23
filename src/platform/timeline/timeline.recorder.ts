@@ -1,6 +1,8 @@
 import { join } from 'node:path';
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { EventBus, UnhandledExceptionBus } from '@nestjs/cqrs';
+import { context } from '@opentelemetry/api';
+import { suppressTracing } from '@opentelemetry/core';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { OrderEvent } from '../../contracts';
 import { ChaosError } from '../chaos/chaos.service';
@@ -60,7 +62,10 @@ export class TimelineRecorder implements OnModuleInit {
   private record(row: typeof timeline.$inferInsert): Promise<void> {
     this.queue = this.queue.then(async () => {
       try {
-        await this.db.insert(timeline).values(row);
+        // Platform plumbing: keep its pg spans out of the order's trace.
+        await context.with(suppressTracing(context.active()), () =>
+          this.db.insert(timeline).values(row),
+        );
       } catch (err) {
         this.logger.error('Failed to record timeline entry', err);
       }
