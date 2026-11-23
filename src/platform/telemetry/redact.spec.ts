@@ -100,6 +100,16 @@ describe('scrubText', () => {
     );
   });
 
+  it('keeps stack frames with scoped package paths', () => {
+    const line =
+      'at AsyncLocalStorageContextManager.with (/app/node_modules/@opentelemetry/context-async-hooks/build/src/AsyncLocalStorageContextManager.js:45:34)';
+    expect(scrubText(line)).toBe(line);
+  });
+
+  it.each(['a@b.cz', 'first.last+tag@sub.example.com', 'params: x, a@b.cz'])('still masks %s', (input) => {
+    expect(scrubText(input)).not.toMatch(/@/);
+  });
+
   it('leaves clean text alone', () => {
     expect(scrubText('boom')).toBe('boom');
   });

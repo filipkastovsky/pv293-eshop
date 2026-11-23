@@ -65,7 +65,7 @@ function redactValue(
 }
 
 const PARAMS_LINE = /\n?params: [^\n]*/g;
-const EMAIL_SHAPED = /[^\s@"',()]+@[^\s@"',()]+\.[a-z]{2,}/gi;
+const EMAIL_SHAPED = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 
 /**
  * Error text may carry values the key-based redaction cannot see. Drizzle's `Failed query`
