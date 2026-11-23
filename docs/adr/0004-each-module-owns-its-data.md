@@ -51,15 +51,14 @@ Chosen: **Option A**. Rules:
 
 - each module owns exactly one schema, named after the module, and is its only reader and writer
 - no joins, foreign keys or views across schemas
-- data another module needs is obtained through that module's contracts (0005): a public query, or
-  a local copy the module keeps up to date from events
+- data another module needs is obtained through that module's contracts (0005): a public query
 - each module manages its own migrations, recorded inside its own schema
 
 ## Consequences
 
 - Good: splitting a module into a service later means moving one schema, not untangling tables
 - Good: a team's migration can never block the other team's release
-- Bad: no cross-module joins; reports spanning modules need a query per module or a read model built from events
+- Bad: no cross-module joins; reports spanning modules need a query per module
 - Bad: identifiers shared between modules (order id, SKU) have no foreign key to protect them; consistency is the contracts' job
 - Neutral: the platform keeps its own schema for cross-cutting data (the order timeline), under the same rules
 - Revisit if any of these is observed:
