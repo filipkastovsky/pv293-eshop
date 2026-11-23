@@ -106,9 +106,12 @@ describe('scrubText', () => {
     expect(scrubText(line)).toBe(line);
   });
 
-  it.each(['a@b.cz', 'first.last+tag@sub.example.com', 'params: x, a@b.cz'])('still masks %s', (input) => {
-    expect(scrubText(input)).not.toMatch(/@/);
-  });
+  it.each(['a@b.cz', 'first.last+tag@sub.example.com', 'params: x, a@b.cz'])(
+    'still masks %s',
+    (input) => {
+      expect(scrubText(input)).not.toMatch(/@/);
+    },
+  );
 
   it('leaves clean text alone', () => {
     expect(scrubText('boom')).toBe('boom');
