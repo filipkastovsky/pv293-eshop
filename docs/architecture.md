@@ -60,7 +60,8 @@ flowchart LR
   payment -. GetOrderSummary .-> checkout
 ```
 
-The happy path of one order, as it appears on its timeline:
+The happy path of one order (the cart events carry no `orderId`, so the order's timeline starts
+at `OrderCreated`):
 
 1. Checkout: `ItemAddedToCart`, `CartCheckedOut`, `OrderCreated`, `OrderPlaced`
 2. Inventory reacts to `OrderPlaced`: `StockReserved`
