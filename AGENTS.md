@@ -46,6 +46,13 @@ of the module you are changing before you change it.
   `this.chaos.maybeFail('<PolicyName>')` (`ChaosService` from `src/platform`), with the policy's
   class name. Nothing comes before it.
 
+## Telemetry
+
+- Modules contain no instrumentation code: no tracer, span or OpenTelemetry import. The platform
+  traces the event bus and every handler on its own.
+- Log with Nest's `Logger` and structured fields (`this.logger.log('stock reserved', { orderId })`).
+- Never log personal data, above all a customer's email, in a message, a field or an error.
+
 ## Inside your module
 
 - Follow the **Internal architecture** section of the module's README. If it says `TODO`, the

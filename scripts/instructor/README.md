@@ -55,3 +55,20 @@ Before the seminar check that every invitation was accepted
 - The secret `LAB_KUBECONFIG` is set and the deploy job actually rolls out (it is not skipping; look for the `::warning::`).
 - Every collaborator invitation has been accepted.
 - No chaos is left armed (a restart clears it).
+- Grafana Explore is open with the Tempo and Loki tabs and the saved TraceQL
+  `{ resource.service.name = "pv293-eshop" }`.
+- After the seminar, check the Grafana Cloud budget (span metrics and service graph add series
+  for one more service).
+
+## Telemetry (Grafana Cloud)
+
+The live app sends traces and logs to the instructor's Grafana Cloud. The demo data sources link a
+trace to its logs and back; they are created once through the Grafana HTTP API, with fixed uids:
+
+| Signal         | Data source name | uid            | Notes                                                                          |
+| -------------- | ---------------- | -------------- | ------------------------------------------------------------------------------ |
+| Traces (Tempo) | `pv293-traces`   | `pv293-traces` | trace to logs: `{service_name="pv293-eshop"} \| trace_id="${__trace.traceId}"` |
+| Logs (Loki)    | `pv293-logs`     | `pv293-logs`   | `trace_id` links to `pv293-traces`                                             |
+
+- Grafana Cloud stack URL: `<TODO: fill in when the data sources are created>`
+- Created on: `<TODO>`

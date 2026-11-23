@@ -162,7 +162,30 @@ flowchart LR
 - Locally the application runs with `npm run start:dev` against the PostgreSQL from
   `docker-compose.yml`; see the [README](../README.md).
 
-## 8. Decisions
+## 8. Observability
+
+The platform makes the running system observable without any code in the modules
+([0009](adr/0009-observe-through-opentelemetry.md)).
+
+- **Traces.** One trace per request. Publishing an event is a span `publish <EventName>`; each
+  subscriber runs in `process <EventName>`; command and query handlers are spans named after the
+  handler class. Spans carry `app.module`, `app.handler` and, when the event has one,
+  `app.order_id`. A handler that throws marks its span as an error and names the handler.
+- **Outbox.** Payment's outbox stores the trace context with each row. The relay starts a new trace,
+  `outbox.relay <EventName>`, with a link back to the one that wrote the row, so the gap between
+  the state change and the delivery is still connected.
+- **Logs.** One JSON line per record on stdout, and the same record sent as telemetry. When a span
+  is active the record carries `trace_id` and `span_id`, so a log line and its trace point at each
+  other. Every HTTP request writes one access log line.
+- **Where it goes.** The application exports only when an endpoint is configured
+  (`OTEL_EXPORTER_OTLP_ENDPOINT`); otherwise nothing leaves the process. In the lab the telemetry
+  goes to the cluster's collector and on to the hosted Grafana. Locally, see "Telemetry locally"
+  in the [README](../README.md). Metrics are not exported.
+- **What modules must not do.** No tracer, span or telemetry import in a module; log with Nest's
+  `Logger` and fields; never put personal data (a customer's email) in a log or on a span. The
+  platform redacts known fields as a safety net, not as permission.
+
+## 9. Decisions
 
 | ADR                                                        | Decision                                                            |
 | ---------------------------------------------------------- | ------------------------------------------------------------------- |
@@ -173,10 +196,11 @@ flowchart LR
 | [0005](adr/0005-integration-through-contracts.md)          | Modules integrate only through contracts: events and public queries |
 | [0006](adr/0006-internal-architecture-per-module.md)       | Internal architecture is each module's own choice                   |
 | [0007](adr/0007-deploy-every-green-main.md)                | Deploy every green `main` automatically                             |
+| [0009](adr/0009-observe-through-opentelemetry.md)          | Observe the system through a vendor-neutral telemetry standard      |
 
 The [ADR index](adr/README.md) has the status of each.
 
-## 9. Open questions
+## 10. Open questions
 
 - **What happens to an event when its handler fails?** Delivery is in-process. Today a reaction
   that throws is reported (it shows as `handler_failed` on the order's timeline), the application

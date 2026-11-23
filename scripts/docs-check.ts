@@ -85,12 +85,25 @@ function checkAdrs(root: string, errors: string[]): void {
     seen.add(n);
   }
   const max = Math.max(0, ...numbers);
+  const open = openAdrNumbers(root);
   for (let n = 1; n <= max; n++) {
-    if (!seen.has(n))
+    if (!seen.has(n) && !open.has(n))
       errors.push(`${ADR_DIR}: gap in ADR numbering, ${pad(n)} is missing`);
   }
 
   checkIndex(root, adrs, errors);
+}
+
+/** Numbers the index lists as open (a line "0008 — ... — open"): reserved, not written yet. */
+function openAdrNumbers(root: string): Set<number> {
+  const file = join(root, ADR_DIR, 'README.md');
+  const open = new Set<number>();
+  if (!existsSync(file)) return open;
+  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const m = /^(?:-\s+)?(\d{4})\s+—.*\bopen\b/.exec(line);
+    if (m) open.add(Number(m[1]));
+  }
+  return open;
 }
 
 const pad = (n: number) => String(n).padStart(4, '0');
