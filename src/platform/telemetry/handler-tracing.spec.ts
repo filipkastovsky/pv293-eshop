@@ -1,9 +1,16 @@
+import { INestApplication, Module } from '@nestjs/common';
 import {
+  CommandBus,
   CommandHandler,
+  CqrsModule,
   EventsHandler,
   ICommandHandler,
   IEventHandler,
+  IQueryHandler,
+  QueryBus,
+  QueryHandler,
 } from '@nestjs/cqrs';
+import { Test } from '@nestjs/testing';
 import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import { InMemorySpanExporter } from '@opentelemetry/sdk-trace';
 import {
@@ -11,7 +18,7 @@ import {
   failedHandler,
   recordFailure,
 } from './handler-context';
-import { appModuleOf, wrapHandler } from './handler-tracing';
+import { appModuleOf, HandlerTracing, wrapHandler } from './handler-tracing';
 import { startTelemetry } from './telemetry';
 
 const spans = new InMemorySpanExporter();
@@ -24,6 +31,9 @@ class Cancelled {
   constructor(readonly orderId: string) {}
 }
 class Ship {
+  constructor(readonly orderId: string) {}
+}
+class GetShipment {
   constructor(readonly orderId: string) {}
 }
 
@@ -108,31 +118,6 @@ describe('wrapHandler', () => {
     expect(cancelled.status.code).toBe(SpanStatusCode.ERROR);
   });
 
-  it('command handler: INTERNAL span named after the class, sync throw keeps the same Error', () => {
-    const boom = new Error('boom');
-    @CommandHandler(Ship)
-    class ShipHandler implements ICommandHandler<Ship> {
-      execute(): Promise<void> {
-        return Promise.resolve();
-      }
-      handle(): void {
-        throw boom;
-      }
-    }
-    wrapHandler(ShipHandler, 'fulfilment');
-    expect(() => new ShipHandler().handle()).toThrow(boom);
-    expect(failedHandler(boom)).toBe('ShipHandler');
-
-    const [span] = spans.getFinishedSpans();
-    expect(span.name).toBe('ShipHandler');
-    expect(span.kind).toBe(SpanKind.INTERNAL);
-    expect(span.attributes).toEqual({
-      'app.handler': 'ShipHandler',
-      'app.module': 'fulfilment',
-    });
-    expect(span.status.code).toBe(SpanStatusCode.ERROR);
-  });
-
   it('a subclass handler inheriting a wrapped handle gets one span with its own name', async () => {
     @EventsHandler(Paid)
     class BasePolicy implements IEventHandler<Paid> {
@@ -158,5 +143,109 @@ describe('wrapHandler', () => {
     const before = Plain.prototype.handle;
     wrapHandler(Plain, 'platform');
     expect(Plain.prototype.handle).toBe(before);
+  });
+});
+
+describe('command and query handlers through the buses', () => {
+  const boom = new Error('boom');
+  const seen: unknown[] = [];
+
+  // Real handlers implement only `execute`; that is what CommandBus and QueryBus call.
+  @CommandHandler(Ship)
+  class ShipHandler implements ICommandHandler<Ship> {
+    async execute(command: Ship): Promise<string> {
+      seen.push(currentHandlerContext());
+      if (command.orderId === 'bad') throw boom;
+      return 'shipped';
+    }
+  }
+
+  @QueryHandler(GetShipment)
+  class GetShipmentHandler implements IQueryHandler<GetShipment> {
+    execute(query: GetShipment): Promise<string> {
+      seen.push(currentHandlerContext());
+      if (query.orderId === 'bad') throw 'no shipment';
+      return Promise.resolve(`shipment of ${query.orderId}`);
+    }
+  }
+
+  // The class name is what `app.module` is derived from.
+  @Module({ providers: [ShipHandler, GetShipmentHandler] })
+  class FulfilmentModule {}
+
+  let app: INestApplication;
+  let commands: CommandBus;
+  let queries: QueryBus;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [CqrsModule.forRoot(), FulfilmentModule],
+      providers: [HandlerTracing],
+    }).compile();
+    app = moduleRef.createNestApplication();
+    await app.init();
+    commands = app.get(CommandBus);
+    queries = app.get(QueryBus);
+  });
+  afterAll(() => app.close());
+  beforeEach(() => {
+    spans.reset();
+    seen.length = 0;
+  });
+
+  it('CommandBus.execute: INTERNAL span named after the class, context inside', async () => {
+    await expect(commands.execute(new Ship('o1'))).resolves.toBe('shipped');
+
+    expect(seen).toEqual([
+      { module: 'fulfilment', handler: 'ShipHandler', orderId: 'o1' },
+    ]);
+    const [span] = spans.getFinishedSpans();
+    expect(spans.getFinishedSpans()).toHaveLength(1);
+    expect(span.name).toBe('ShipHandler');
+    expect(span.kind).toBe(SpanKind.INTERNAL);
+    expect(span.attributes).toEqual({
+      'app.handler': 'ShipHandler',
+      'app.module': 'fulfilment',
+      'app.order_id': 'o1',
+    });
+    expect(span.status.code).not.toBe(SpanStatusCode.ERROR);
+  });
+
+  it('CommandBus.execute rejecting: ERROR span, same Error, registry names the handler', async () => {
+    await expect(commands.execute(new Ship('bad'))).rejects.toBe(boom);
+
+    expect(failedHandler(boom)).toBe('ShipHandler');
+    const [span] = spans.getFinishedSpans();
+    expect(span.name).toBe('ShipHandler');
+    expect(span.status.code).toBe(SpanStatusCode.ERROR);
+  });
+
+  it('QueryBus.execute: INTERNAL span named after the class, context inside', async () => {
+    await expect(queries.execute(new GetShipment('o2'))).resolves.toBe(
+      'shipment of o2',
+    );
+
+    expect(seen).toEqual([
+      { module: 'fulfilment', handler: 'GetShipmentHandler', orderId: 'o2' },
+    ]);
+    const [span] = spans.getFinishedSpans();
+    expect(span.name).toBe('GetShipmentHandler');
+    expect(span.kind).toBe(SpanKind.INTERNAL);
+    expect(span.attributes).toEqual({
+      'app.handler': 'GetShipmentHandler',
+      'app.module': 'fulfilment',
+      'app.order_id': 'o2',
+    });
+  });
+
+  it('QueryBus.execute throwing a string: ERROR span, registry names the handler', async () => {
+    await expect(queries.execute(new GetShipment('bad'))).rejects.toBe(
+      'no shipment',
+    );
+
+    expect(failedHandler('no shipment')).toBe('GetShipmentHandler');
+    const [span] = spans.getFinishedSpans();
+    expect(span.name).toBe('GetShipmentHandler');
+    expect(span.status.code).toBe(SpanStatusCode.ERROR);
   });
 });

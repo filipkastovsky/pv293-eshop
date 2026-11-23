@@ -13,7 +13,7 @@ const EVENTS_HANDLER_METADATA = '__eventsHandler__';
 const COMMAND_HANDLER_METADATA = '__commandHandler__';
 const QUERY_HANDLER_METADATA = '__queryHandler__';
 
-/** On a `handle` this file installed: the unwrapped original, so nothing is wrapped twice. */
+/** On a method this file installed: the unwrapped original, so nothing is wrapped twice. */
 const ORIGINAL = Symbol('pv293.telemetry.original');
 
 const APP_MODULES = [
@@ -44,13 +44,15 @@ interface HandlerHandle {
 
 /**
  * Gives every CQRS handler a span and a handler context without touching handler code.
- * At bootstrap it finds providers with event, command or query handler metadata and wraps
- * `prototype.handle` twice:
+ * At bootstrap it finds providers with event, command or query handler metadata and wraps the
+ * method the bus calls (`handle` for event handlers, `execute` for command and query handlers)
+ * on the prototype, twice:
  *  - inside: sets the HandlerContext (AsyncLocalStorage) and records in the failure registry
  *    which handler let a thrown value escape, then rethrows the same value;
  *  - outside: nestjs-otel's `Span`, which starts the span, marks it ERROR on a throw or
  *    rejection, and ends it.
- * The bus calls `instance.handle(event)` at dispatch time, so wrapping the prototype is enough.
+ * The buses call `instance.handle(event)` / `instance.execute(command)` at dispatch time, so
+ * wrapping the prototype is enough.
  */
 @Injectable()
 export class HandlerTracing implements OnApplicationBootstrap {
@@ -89,13 +91,14 @@ export function wrapHandler(type: Type, module: string): void {
   const kind = handlerKind(type);
   const proto = type.prototype as Record<string, unknown> | undefined;
   if (!kind || !proto) return;
-  const current = proto.handle as HandlerHandle | undefined;
+  const method = kind === 'event' ? 'handle' : 'execute';
+  const current = proto[method] as HandlerHandle | undefined;
   if (typeof current !== 'function') return;
   // Already wrapped for this class (a second app boot in the same process).
-  if (Object.hasOwn(proto, 'handle') && current[ORIGINAL]) return;
+  if (Object.hasOwn(proto, method) && current[ORIGINAL]) return;
 
   const handler = type.name;
-  // A subclass handler inheriting a wrapped `handle` gets its own span, not a nested pair.
+  // A subclass handler inheriting a wrapped method gets its own span, not a nested pair.
   const original = current[ORIGINAL] ?? current;
   const firstEvent: string | undefined =
     kind === 'event'
@@ -145,8 +148,8 @@ export function wrapHandler(type: Type, module: string): void {
   Span(spanName, (...args: unknown[]) => ({
     kind: spanKind,
     attributes: spanAttributes(kind, args[0], handler, module),
-  }))(proto, 'handle', descriptor);
-  Object.defineProperty(proto, 'handle', descriptor);
+  }))(proto, method, descriptor);
+  Object.defineProperty(proto, method, descriptor);
 }
 
 function spanAttributes(
