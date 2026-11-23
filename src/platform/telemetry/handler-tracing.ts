@@ -164,6 +164,7 @@ function spanAttributes(
       ? {
           'messaging.system': 'nestjs-cqrs',
           'messaging.operation.type': 'process',
+          'messaging.operation.name': 'process',
           'messaging.destination.name': messageName(message),
         }
       : {}),

@@ -73,6 +73,12 @@ export class OutboxRelay implements OnApplicationBootstrap, OnModuleDestroy {
       {
         root: true,
         kind: SpanKind.CONSUMER,
+        attributes: {
+          'messaging.system': 'nestjs-cqrs',
+          'messaging.destination.name': row.eventName,
+          'messaging.operation.type': 'receive',
+          'messaging.operation.name': 'outbox.relay',
+        },
         links: linkFrom(row.traceContext),
       },
       async (span) => {

@@ -321,6 +321,26 @@ describe('payment', () => {
         publish?.spanContext().spanId,
       );
       expect(handler?.spanContext().traceId).toBe(relay.spanContext().traceId);
+      expect(relay.attributes).toMatchObject({
+        'messaging.system': 'nestjs-cqrs',
+        'messaging.destination.name': 'PaymentSucceeded',
+        'messaging.operation.type': 'receive',
+        'messaging.operation.name': 'outbox.relay',
+      });
+      expect(publish?.attributes).toMatchObject({
+        'messaging.operation.type': 'send',
+        'messaging.operation.name': 'publish',
+      });
+      expect(handler?.attributes).toMatchObject({
+        'messaging.operation.type': 'process',
+        'messaging.operation.name': 'process',
+      });
+      // The collector's set_semconv_span_name renames to "{operation.name} {destination.name}".
+      for (const s of [relay, publish, handler]) {
+        expect(
+          `${s?.attributes['messaging.operation.name']} ${s?.attributes['messaging.destination.name']}`,
+        ).toBe(s?.name);
+      }
     });
 
     it('row with trace_context NULL -> published, span has zero links', async () => {

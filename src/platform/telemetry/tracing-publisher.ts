@@ -21,6 +21,7 @@ export class TracingPublisher implements IEventPublisher {
         attributes: {
           'messaging.system': 'nestjs-cqrs',
           'messaging.operation.type': 'send',
+          'messaging.operation.name': 'publish',
           'messaging.destination.name': name,
           ...(typeof orderId === 'string' ? { 'app.order_id': orderId } : {}),
         },

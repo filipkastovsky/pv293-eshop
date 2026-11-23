@@ -111,6 +111,13 @@ describe('wrapHandler', () => {
     expect(paid.name).toBe('process Paid');
     expect(paid.kind).toBe(SpanKind.CONSUMER);
     expect(paid.attributes['messaging.destination.name']).toBe('Paid');
+    expect(paid.attributes['messaging.operation.type']).toBe('process');
+    expect(paid.attributes['messaging.operation.name']).toBe('process');
+    for (const s of [paid, cancelled]) {
+      expect(
+        `${s.attributes['messaging.operation.name']} ${s.attributes['messaging.destination.name']}`,
+      ).toBe(s.name);
+    }
     expect(cancelled.name).toBe('process Cancelled');
     expect(cancelled.attributes['messaging.destination.name']).toBe(
       'Cancelled',
