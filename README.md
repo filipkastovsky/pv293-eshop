@@ -9,7 +9,7 @@ teams. Every green `main` is deployed to the lab cluster once the lab deploy cre
 
 ## Quick start
 
-Requirements: Node.js >= 24.15 (`.nvmrc`; enforced by `engines`) and Docker or Podman.
+Requirements: Node.js >= 26 (`.nvmrc`; enforced by `engines`) and Docker or Podman.
 
 ```bash
 docker compose up -d        # PostgreSQL 17 on localhost:5432 (eshop/eshop/eshop); or: podman compose up -d

@@ -30,7 +30,7 @@ runs:
         npm run build
         test -f dist/main.js
         psql -h localhost -U eshop -d eshop -c 'CREATE DATABASE smoke'
-        node dist/main.js > smoke.log 2>&1 &
+        OTEL_TRACES_EXPORTER=console node --import ./dist/instrumentation.mjs dist/main.js > smoke.log 2>&1 &
         pid=$!
         trap 'rc=$?; [ "$rc" -eq 0 ] || cat smoke.log; kill "$pid" 2>/dev/null || true' EXIT
         up=0
@@ -45,3 +45,9 @@ runs:
         [[ "$health" == *'"ok"'* ]] || { echo "health body lacks ok"; exit 1; }
         products=$(curl -fsS http://localhost:3100/catalog/products)
         [[ "$products" == *sku* ]] || { echo "catalog check failed"; exit 1; }
+        span=0
+        for _ in $(seq 1 10); do
+          if grep -q "GET /health" smoke.log; then span=1; break; fi
+          sleep 1
+        done
+        [ "$span" -eq 1 ] || { echo "no GET /health span in smoke.log"; exit 1; }
