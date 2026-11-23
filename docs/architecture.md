@@ -84,7 +84,7 @@ Loyalty, Returns) have no module. The board is a dated snapshot in
 | Module                                          | Owner      | Schema          | Internal style                           |
 | ----------------------------------------------- | ---------- | --------------- | ---------------------------------------- |
 | [catalog](../src/catalog/README.md)             | Instructor | `catalog`       | Plain create-read-update service         |
-| [checkout](../src/checkout/README.md)           | Team A     | `checkout`      | Team decides                             |
+| [checkout](../src/checkout/README.md)           | Team A     | `checkout`      | Event-sourced order, state-based cart    |
 | [inventory](../src/inventory/README.md)         | Team B     | `inventory`     | Team decides                             |
 | [fulfilment](../src/fulfilment/README.md)       | Team B     | `fulfilment`    | Team decides                             |
 | [payment](../src/payment/README.md)             | Instructor | `payment`       | Ports and adapters, transactional outbox |
