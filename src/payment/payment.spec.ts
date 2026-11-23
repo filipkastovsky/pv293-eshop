@@ -1,9 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
-import { EventBus, IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import {
+  EventBus,
+  EventsHandler,
+  IEventHandler,
+  IQueryHandler,
+  QueryHandler,
+} from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
+import { trace } from '@opentelemetry/api';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import request from 'supertest';
 import { createTestDb, TestDb } from '../../test/setup-db';
+import { resetTelemetry, spans } from '../../test/support/telemetry';
 import {
   DomainEvent,
   GetOrderSummary,
@@ -12,7 +21,7 @@ import {
   PaymentInitiated,
   PaymentSucceeded,
 } from '../contracts';
-import { PlatformModule } from '../platform';
+import { DB, PlatformModule } from '../platform';
 import { PaymentRepository } from './application/payment.repository';
 import { Payment } from './domain/payment';
 import { OutboxRepository } from './outbox/outbox.repository';
@@ -26,6 +35,12 @@ class StubOrderSummaryHandler implements IQueryHandler<GetOrderSummary> {
   async execute(query: GetOrderSummary): Promise<OrderSummary | null> {
     return orders.get(query.orderId) ?? null;
   }
+}
+
+/** A subscriber, so the relay's publish has handler spans below it. */
+@EventsHandler(PaymentSucceeded)
+class SucceededSubscriber implements IEventHandler<PaymentSucceeded> {
+  handle(): void {}
 }
 
 const order = (
@@ -55,7 +70,7 @@ describe('payment', () => {
   const boot = async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [PlatformModule.register(), PaymentModule],
-      providers: [StubOrderSummaryHandler],
+      providers: [StubOrderSummaryHandler, SucceededSubscriber],
     }).compile();
     const a = moduleRef.createNestApplication();
     await a.init();
@@ -227,5 +242,126 @@ describe('payment', () => {
     expect(
       published.slice(1).map((e) => (e as PaymentSucceeded).orderId),
     ).toEqual([first, second]);
+  });
+
+  describe('trace context', () => {
+    const relaySpans = () =>
+      spans.getFinishedSpans().filter((s) => s.name.startsWith('outbox.relay'));
+    const waitForRelay = (n: number) => until(() => relaySpans().length >= n);
+    const event = (orderId: string) =>
+      new PaymentSucceeded({ orderId, paymentId: randomUUID() });
+    const addInSpan = async (e: PaymentSucceeded) => {
+      const outboxRepo = app.get(OutboxRepository);
+      return trace
+        .getTracer('test')
+        .startActiveSpan('request', async (span) => {
+          try {
+            await app
+              .get<NodePgDatabase>(DB)
+              .transaction((tx) => outboxRepo.add(tx, e));
+            return span.spanContext();
+          } finally {
+            span.end();
+          }
+        });
+    };
+
+    beforeEach(() => resetTelemetry());
+
+    it('add() inside an active span stores traceparent of that span', async () => {
+      const e = event(randomUUID());
+      const ctx = await addInSpan(e);
+      const { rows } = await db.pool.query(
+        `SELECT trace_context FROM payment.outbox WHERE payload->>'orderId' = $1`,
+        [e.orderId],
+      );
+      expect(rows[0].trace_context.traceparent).toMatch(
+        new RegExp(`^00-${ctx.traceId}-${ctx.spanId}-0[01]$`),
+      );
+    });
+
+    it('add() with no active span stores NULL', async () => {
+      const e = event(randomUUID());
+      await app
+        .get<NodePgDatabase>(DB)
+        .transaction((tx) => app.get(OutboxRepository).add(tx, e));
+      const { rows } = await db.pool.query(
+        `SELECT trace_context FROM payment.outbox WHERE payload->>'orderId' = $1`,
+        [e.orderId],
+      );
+      expect(rows[0].trace_context).toBeNull();
+    });
+
+    it('relay publishes each row as root span "outbox.relay <EventName>" with one link to the stored context; handler spans are its descendants', async () => {
+      const ctx = await addInSpan(event(randomUUID()));
+      await until(() =>
+        relaySpans().some((s) => s.links[0]?.context.traceId === ctx.traceId),
+      );
+      const relay = relaySpans().find(
+        (s) => s.links[0]?.context.traceId === ctx.traceId,
+      );
+      if (!relay) throw new Error('relay span missing');
+      expect(relay.name).toBe('outbox.relay PaymentSucceeded');
+      expect(relay.parentSpanContext).toBeUndefined();
+      expect(relay.spanContext().traceId).not.toBe(ctx.traceId);
+      expect(relay.links).toHaveLength(1);
+      expect(relay.links[0].context).toMatchObject({
+        traceId: ctx.traceId,
+        spanId: ctx.spanId,
+      });
+      const mine = spans
+        .getFinishedSpans()
+        .filter((s) => s.spanContext().traceId === relay.spanContext().traceId);
+      const publish = mine.find((s) => s.name === 'publish PaymentSucceeded');
+      expect(publish?.parentSpanContext?.spanId).toBe(
+        relay.spanContext().spanId,
+      );
+      const handler = mine.find((s) => s.name === 'process PaymentSucceeded');
+      expect(handler?.parentSpanContext?.spanId).toBe(
+        publish?.spanContext().spanId,
+      );
+      expect(handler?.spanContext().traceId).toBe(relay.spanContext().traceId);
+    });
+
+    it('row with trace_context NULL -> published, span has zero links', async () => {
+      const orderId = randomUUID();
+      await insertOutbox(
+        'PaymentSucceeded',
+        { orderId, paymentId: randomUUID() },
+        '2022-01-01T00:00:00Z',
+      );
+      await waitForRelay(1);
+      expect(relaySpans()[0].links).toHaveLength(0);
+      expect(
+        published.some((e) => (e as PaymentSucceeded).orderId === orderId),
+      ).toBe(true);
+    });
+
+    it('row with trace_context {"traceparent":"garbage"} -> published, zero links, next row still published', async () => {
+      const bad = randomUUID();
+      const next = randomUUID();
+      await db.pool.query(
+        `INSERT INTO payment.outbox (event_name, payload, trace_context, created_at) VALUES ($1, $2, $3, $4)`,
+        [
+          'PaymentSucceeded',
+          JSON.stringify({ orderId: bad, paymentId: randomUUID() }),
+          JSON.stringify({ traceparent: 'garbage' }),
+          '2023-01-01T00:00:00Z',
+        ],
+      );
+      await db.pool.query(
+        `INSERT INTO payment.outbox (event_name, payload, trace_context, created_at) VALUES ($1, $2, $3, $4)`,
+        [
+          'PaymentSucceeded',
+          JSON.stringify({ orderId: next, paymentId: randomUUID() }),
+          JSON.stringify(['not', 'an', 'object']),
+          '2023-01-02T00:00:00Z',
+        ],
+      );
+      await waitForRelay(2);
+      expect(relaySpans().map((s) => s.links.length)).toEqual([0, 0]);
+      const ids = published.map((e) => (e as PaymentSucceeded).orderId);
+      expect(ids).toEqual(expect.arrayContaining([bad, next]));
+    });
   });
 });

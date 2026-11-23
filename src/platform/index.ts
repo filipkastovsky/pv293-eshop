@@ -8,3 +8,8 @@ export {
   type HandlerContext,
 } from './telemetry/handler-context';
 export { PlatformLogger } from './telemetry/logger';
+export {
+  captureContext,
+  linkFrom,
+  type TraceCarrier,
+} from './telemetry/propagation';

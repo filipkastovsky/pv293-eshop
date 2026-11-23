@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { DomainEvent } from '../../contracts';
-import { DB } from '../../platform';
+import { captureContext, DB } from '../../platform';
 import { outbox } from '../db/schema';
 
 /** Anything that can insert: the pool, or a transaction handed in by the caller. */
@@ -17,6 +17,7 @@ export class OutboxRepository {
     await tx.insert(outbox).values({
       eventName: event.constructor.name,
       payload: { ...event },
+      traceContext: captureContext(),
     });
   }
 

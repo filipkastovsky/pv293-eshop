@@ -1,0 +1,1 @@
+ALTER TABLE "payment"."outbox" ADD COLUMN "trace_context" jsonb;
