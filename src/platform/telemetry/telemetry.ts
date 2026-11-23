@@ -22,6 +22,7 @@ import {
   SpanExporter,
   SpanProcessor,
 } from '@opentelemetry/sdk-trace';
+import { ScrubbingSpanProcessor } from './scrubbing-span-processor';
 
 export type ExporterKind = 'otlp' | 'console' | 'none';
 
@@ -160,7 +161,10 @@ export function startTelemetry(opts: TelemetryOptions = {}): Telemetry {
       new ExpressInstrumentation(),
       new PgInstrumentation({ requireParentSpan: true }),
     ],
-    spanProcessors: [spanProcessor(config.tracesExporter, opts.spanExporter)],
+    spanProcessors: [
+      new ScrubbingSpanProcessor(),
+      spanProcessor(config.tracesExporter, opts.spanExporter),
+    ],
     logRecordProcessors: logRecordProcessors(
       config.logsExporter,
       opts.logExporter,

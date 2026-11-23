@@ -9,6 +9,7 @@ import { ChaosError } from '../chaos/chaos.service';
 import { DB } from '../db/db.tokens';
 import { migrateModule } from '../db/migrate-module';
 import { failedHandler } from '../telemetry/handler-context';
+import { scrubText } from '../telemetry/redact';
 import { timeline } from './db/schema';
 
 /** Projects every order-scoped event and every handler failure into `platform.timeline`. */
@@ -50,7 +51,7 @@ export class TimelineRecorder implements OnModuleInit {
           failedHandler(exception) ??
           (exception instanceof ChaosError ? exception.handler : 'unknown'),
         payload: {
-          error: error?.message ?? String(exception),
+          error: scrubText(error?.message ?? String(exception)),
           event: cause.constructor.name,
         },
         at: new Date(),

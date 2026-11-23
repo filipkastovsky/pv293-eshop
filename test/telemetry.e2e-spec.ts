@@ -3,16 +3,26 @@ import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { SeverityNumber, SpanKind, SpanStatusCode } from '@opentelemetry/api';
 import type { ReadableLogRecord } from '@opentelemetry/sdk-logs';
 import type { ReadableSpan } from '@opentelemetry/sdk-trace';
+import { DrizzleQueryError } from 'drizzle-orm';
 import { OrderPlaced } from '../src/contracts';
 import { bootTestApp, TestApp } from './support/app';
 import { logs, spans } from './support/telemetry';
 
-/** Throws for orders whose id says so: an Error for `boom-*`, a plain string for `str-*`. */
+const DB_ERROR_EMAIL = 'a@b.cz';
+
+/** Throws for orders whose id says so: an Error for `boom-*`, a plain string for `str-*`, a failed query for `db-*`. */
 @EventsHandler(OrderPlaced)
 class ExplodingTestPolicy implements IEventHandler<OrderPlaced> {
   handle(event: OrderPlaced): void {
     if (event.orderId.startsWith('boom-')) throw new Error('boom');
     if (event.orderId.startsWith('str-')) throw 'x';
+    if (event.orderId.startsWith('db-')) {
+      throw new DrizzleQueryError(
+        'insert into "orders" ("customer_email") values ($1)',
+        [DB_ERROR_EMAIL],
+        new Error('null value in column "x" violates not-null constraint'),
+      );
+    }
   }
 }
 
@@ -219,6 +229,40 @@ describe('telemetry', () => {
     const later = `ok-${randomUUID()}`;
     await t.emit('OrderPlaced', placed(later));
     await t.waitForTimeline(later, ['OrderPlaced', 'OrderSummarySent']);
+  });
+
+  it("a failed query's bound parameters (the customer email) reach no span, log record or timeline entry", async () => {
+    const orderId = `db-${randomUUID()}`;
+    await t.emit('OrderPlaced', placed(orderId, DB_ERROR_EMAIL));
+
+    const failed = await waitForFailure(orderId);
+    expect(failed).toMatchObject({
+      kind: 'handler_failed',
+      name: 'ExplodingTestPolicy',
+    });
+    const span = await waitForSpan(processSpan(orderId, 'ExplodingTestPolicy'));
+    expect(span.status.code).toBe(SpanStatusCode.ERROR);
+    expect(span.status.message).toContain('Failed query');
+    const exception = span.events.find((e) => e.name === 'exception');
+    expect(exception?.attributes?.['exception.message']).toContain(
+      'Failed query',
+    );
+    // The bus's error log for this failure, then everything that was exported.
+    await waitForLog(
+      (r) =>
+        r.severityNumber === SeverityNumber.ERROR &&
+        r.spanContext?.traceId === span.spanContext().traceId,
+    );
+
+    const everything = JSON.stringify([
+      spans
+        .getFinishedSpans()
+        .map((s) => [s.name, s.status, s.attributes, s.events]),
+      logs.getFinishedLogRecords().map((r) => [r.body, r.attributes]),
+      // The OrderPlaced entry carries the event payload by design; the failure record is error text.
+      failed,
+    ]);
+    expect(everything).not.toContain(DB_ERROR_EMAIL);
   });
 
   it('no span attribute anywhere contains the customer email', async () => {

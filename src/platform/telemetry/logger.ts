@@ -8,6 +8,7 @@ import {
 } from '@opentelemetry/api';
 import { DestinationStream, Level, Logger as Pino, pino } from 'pino';
 import { currentHandlerContext } from './handler-context';
+import { Fields, isRecord, redact, scrubbedMessage, scrubText } from './redact';
 
 export interface PlatformLoggerOptions {
   /** Where the JSON lines go. Defaults to stdout. */
@@ -15,8 +16,6 @@ export interface PlatformLoggerOptions {
   /** Minimum level (pino names). Defaults to env `LOG_LEVEL`, else `info`. */
   level?: string;
 }
-
-type Fields = Record<string, unknown>;
 
 const LEVELS: readonly string[] = [
   'trace',
@@ -44,10 +43,6 @@ const BOOT_CONTEXTS = new Set([
   'InstanceLoader',
   'NestFactory',
 ]);
-
-/** Field names that carry personal data. Redacted at the top level and one level down. */
-const REDACTED_KEYS = new Set(['customerEmail', 'to', 'email']);
-const CENSOR = '[redacted]';
 
 const OTEL_LOGGER_NAME = 'pv293-eshop';
 
@@ -109,17 +104,20 @@ export class PlatformLogger implements LoggerService {
     if (!this.pino.isLevelEnabled(level)) return;
 
     const record = toRecord(message, rest, level);
-    const fields = redact({
-      ...(context ? { logger: context } : {}),
-      ...handlerFields(),
-      ...record.fields,
-    });
+    const fields = scrubErrorText(
+      redact({
+        ...(context ? { logger: context } : {}),
+        ...handlerFields(),
+        ...record.fields,
+      }),
+    );
+    const msg = scrubText(record.msg);
 
-    this.pino[level](fields, record.msg);
+    this.pino[level](fields, msg);
     logs.getLogger(OTEL_LOGGER_NAME).emit({
       severityNumber: SEVERITY[level],
       severityText: level,
-      body: record.msg,
+      body: msg,
       attributes: toAttributes(fields),
     });
   }
@@ -157,17 +155,6 @@ const isStack = (value: unknown): value is string =>
   typeof value === 'string' && STACK_LINE.test(value);
 
 /**
- * Anything whose own properties are data: plain objects and class instances (domain events),
- * but not arrays, errors or dates.
- */
-const isRecord = (value: unknown): value is Fields =>
-  typeof value === 'object' &&
-  value !== null &&
-  !Array.isArray(value) &&
-  !(value instanceof Error) &&
-  !(value instanceof Date);
-
-/**
  * Nest's `Logger` appends its context as the last string argument. A stack trace (Nest's
  * `error(message, stack, context)` form, or a static call without context) is not a context.
  */
@@ -198,7 +185,7 @@ function toRecord(
   let msg: string;
 
   if (message instanceof Error) {
-    msg = message.message;
+    msg = scrubbedMessage(message);
     fields = errorFields(message);
   } else if (isRecord(message)) {
     const { msg: m, message: mm, ...rest } = { ...message };
@@ -237,9 +224,21 @@ function toRecord(
 function errorFields(error: Error): Fields {
   return {
     'err.type': error.constructor?.name || error.name,
-    'err.message': error.message,
+    'err.message': scrubbedMessage(error),
     ...(error.stack ? { 'err.stack': error.stack } : {}),
   };
+}
+
+/**
+ * The error text fields (`err.message`, `err.stack`) may carry values, e.g. a failed query's
+ * bound parameters; key-based redaction cannot see those.
+ */
+function scrubErrorText(fields: Fields): Fields {
+  for (const key of ['err.message', 'err.stack']) {
+    const value = fields[key];
+    if (typeof value === 'string') fields[key] = scrubText(value);
+  }
+  return fields;
 }
 
 /** A bare stack string: its first line is `Type: message`. */
@@ -251,37 +250,6 @@ function stackFields(stack: string, known: Fields): Fields {
     'err.message': known['err.message'] ?? match?.[2] ?? head,
     'err.stack': stack,
   };
-}
-
-/**
- * `customerEmail`, `to`, `email` and `*.customerEmail`, `*.to`, `*.email` → `[redacted]`.
- * Nested objects, class instances included, are copied as their own enumerable properties;
- * the caller's objects stay as they were.
- */
-export function redact(fields: Fields): Fields {
-  const out: Fields = {};
-  for (const [key, value] of Object.entries(fields)) {
-    if (REDACTED_KEYS.has(key)) {
-      out[key] = CENSOR;
-    } else if (isRecord(value)) {
-      out[key] = redactOneLevel(value);
-    } else if (Array.isArray(value)) {
-      out[key] = value.map((item) =>
-        isRecord(item) ? redactOneLevel(item) : item,
-      );
-    } else {
-      out[key] = value;
-    }
-  }
-  return out;
-}
-
-function redactOneLevel(object: Fields): Fields {
-  const out: Fields = { ...object };
-  for (const key of Object.keys(out)) {
-    if (REDACTED_KEYS.has(key)) out[key] = CENSOR;
-  }
-  return out;
 }
 
 /** OTel attribute values must be plain data; anything else goes through JSON. */

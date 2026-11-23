@@ -2,6 +2,7 @@ import { Writable } from 'node:stream';
 import { SeverityNumber, trace } from '@opentelemetry/api';
 import { InMemoryLogRecordExporter } from '@opentelemetry/sdk-logs';
 import { InMemorySpanExporter } from '@opentelemetry/sdk-trace';
+import { DrizzleQueryError } from 'drizzle-orm';
 import { OrderPlaced } from '../../contracts';
 import { runInHandlerContext } from './handler-context';
 import { PlatformLogger } from './logger';
@@ -242,6 +243,53 @@ describe('PlatformLogger', () => {
     expect(records()[1].attributes).toMatchObject({
       order: { customerEmail: '[redacted]', total: 5 },
     });
+  });
+
+  it('redacts deep, array and *Email fields, and survives a cycle, in stdout and in OTel attributes', () => {
+    const { logger, lines } = capture();
+    const cyclic: Record<string, unknown> = {
+      recipientEmail: 'ann@example.com',
+    };
+    cyclic.self = cyclic;
+    logger.log(
+      'deep',
+      {
+        order: { customer: { email: 'ann@example.com' } },
+        recipientEmail: 'ann@example.com',
+        events: [{ customerEmail: 'ann@example.com' }, { total: 1 }],
+        cyclic,
+      },
+      'Test',
+    );
+
+    expect(JSON.stringify(lines)).not.toContain('ann@example.com');
+    expect(
+      JSON.stringify(records().map((r) => [r.body, r.attributes])),
+    ).not.toContain('ann@example.com');
+    expect(lines[0]).toMatchObject({
+      order: { customer: { email: '[redacted]' } },
+      recipientEmail: '[redacted]',
+      events: [{ customerEmail: '[redacted]' }, { total: 1 }],
+    });
+  });
+
+  it("scrubs a failed query's bound parameters from msg, err.message and err.stack", () => {
+    const { logger, lines } = capture();
+    const error = new DrizzleQueryError(
+      'insert into "t" ("email") values ($1)',
+      ['a@b.cz'],
+      new Error('connection lost'),
+    );
+    logger.error(error, 'Test');
+    logger.error('failed', error.stack, 'Test');
+    logger.error('wrapped', error, 'Test');
+
+    expect(lines).toHaveLength(3);
+    expect(JSON.stringify(lines)).not.toContain('a@b.cz');
+    expect(
+      JSON.stringify(records().map((r) => [r.body, r.attributes])),
+    ).not.toContain('a@b.cz');
+    expect(lines[0]['err.message']).toContain('Failed query: insert into');
   });
 
   const orderPlaced = () =>
